@@ -583,14 +583,14 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
                             }
                         }
                         $scope.motionMoving = moving;
-                        if($scope.axis[index].callback) {
-                            $scope.axis[index].pos = msg.position;
-                            $scope.axis[index].callback(msg.position);
-                            $scope.axis[index].callback = null;
+                        $scope.axis[index].pos = msg.position;
+                        if($scope.axis[index].callbacks && $scope.axis[index].callbacks.length > 0) {
+                            for(var i = 0; i < $scope.axis[index].callbacks.length; i++) {
+                                $scope.axis[index].callbacks[i](msg.position);
+                            }
+                            $scope.axis[index].callbacks = null;
                         //} else if(!$scope.currentKf && $scope.axis[index].pos == 0) {
                         //    $scope.zeroAxis($scope.axis[index].id);
-                        } else {
-                            $scope.axis[index].pos = msg.position;
                         }
                     }
                     callback(null, msg.complete);
@@ -705,6 +705,12 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
                     break;
                 case 'timelapse-clips':
                     $scope.clips = msg.clips ? msg.clips : [];
+                    for(var i = 0; i < $scope.clips.length; i++) {
+                        $scope.clips[i].pos = 0;
+                        $scope.clips[i].playing = false;
+                        $scope.clips[i].max = -1;
+                        if(timelapseImages[$scope.clips[i].index]) $scope.clips[i].max = timelapseImages[$scope.clips[i].index].length;
+                    }
                     callback(null, $scope.clips);
                     break;
                 case 'timelapse-images':
@@ -909,6 +915,7 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
             }
         }
         if (tl) {
+            tl.max = timelapseImages[index].length - 1;
             tl.playing = true;
             tl.loading = false;
             var frame = 0;
@@ -918,7 +925,11 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
                 frame++;
                 if (tl.playing && frame < timelapseImages[index].length) {
                     tl.image = timelapseImages[index][frame];
-                    $scope.scrubber.pos = frame;
+                    if(index == 'current') {
+                        $scope.scrubber.pos = frame;
+                    } else {
+                        tl.pos = frame;
+                    }
                 } else {
                     $interval.cancel(intervalHandle);
                     tl.playing = false;
@@ -939,8 +950,13 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
         }, 10000);
     }
 
-    $scope.updateScrubber = function(frame) {
-        if(frame < timelapseImages['current'].length) {
+    $scope.updateScrubber = function(frame, tl) {
+        if(frame >= timelapseImages[tl ? tl.index : 'current'].length) frame = timelapseImages[tl ? tl.index : 'current'].length - 1;
+        if(tl) {
+            if(tl.pos != frame) tl.pos = frame;
+            if(tl.playing) tl.playing = false;
+            tl.image = timelapseImages[tl.index][frame];
+        } else {
             if($scope.scrubber.pos != frame) $scope.scrubber.pos = frame;
             if($scope.currentTimelapse.playing) $scope.currentTimelapse.playing = false;
             $scope.currentTimelapse.image = timelapseImages['current'][frame];
@@ -948,17 +964,30 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
         }
     }
 
-    $scope.decScrubber = function(frame) {
+    $scope.decScrubber = function(frame, tl) {
         if(frame > 0) {
             frame--;
-            $scope.updateScrubber(frame);
+            $scope.updateScrubber(frame, tl);
         }
     }
 
-    $scope.incScrubber = function(frame) {
-        if(frame < timelapseImages['current'].length) {
+    $scope.incScrubber = function(frame, tl) {
+        if(frame < timelapseImages[tl ? tl.index : 'current'].length) {
             frame++;
-            $scope.updateScrubber(frame);
+            $scope.updateScrubber(frame, tl);
+        }
+    }
+
+    $scope.pauseTimelapse = function(index) {
+        var tl;
+        for (i = 0; i < $scope.clips.length; i++) {
+            if ($scope.clips[i].index == index) {
+                tl = $scope.clips[i];
+                break;
+            }
+        }
+        if(tl) {
+            tl.playing = false;
         }
     }
 
@@ -1556,6 +1585,22 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
             }
         }
     }
+    var validateMotorKeyframes = function() {
+        for(var k = 0; k < $scope.timelapse.keyframes.length; k++) { // ensure motor positions are set for all keyframes, even if not edited
+            var positions = {};
+            for(var i = 0; i < $scope.axis.length; i++) {
+                if($scope.axis[i].connected) {
+                    var id = $scope.axis[i].id;
+                    if(!positions[id]) positions[id] = 0;
+                    if(!$scope.timelapse.keyframes[k].motor[id]) {
+                        $scope.timelapse.keyframes[k].motor[id] = positions[id];
+                    } else {
+                        positions[id] = $scope.timelapse.keyframes[k].motor[id];
+                    }
+                }
+            }
+        }
+    }
     $scope.closeExposure = function() {
         var delay = 0;
         if ($scope.focusMode) {
@@ -1584,9 +1629,10 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
                             var id = $scope.axis[j].id;
                             if($scope.axis[j].moving) {
                                 (function(kfIndex, axisIndex){
-                                    $scope.axis[j].callback = function() {
+                                    if(!$scope.axis[j].callbacks) $scope.axis[j].callbacks = [];
+                                    $scope.axis[j].callbacks.push(function() {
                                         $scope.timelapse.keyframes[i].motor[id] -= $scope.axis[axisIndex].pos;
-                                    }
+                                    });
                                 })(i, j);
                             } else {
                                 $scope.timelapse.keyframes[i].motor[id] -= $scope.axis[j].pos;
@@ -1601,9 +1647,10 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
                 for(var i = 0; i < $scope.axis.length; i++) {
                     if($scope.axis[i].moving) {
                         (function(id, i){
-                            $scope.axis[i].callback = function(position) {
+                            if(!$scope.axis[i].callbacks) $scope.axis[i].callbacks = [];
+                            $scope.axis[i].callbacks.push(function(position) {
                                 $scope.zeroAxis(id);
-                            };
+                            });
                         })($scope.axis[i].id, i);
                     } else {
                         $scope.zeroAxis($scope.axis[i].id);
@@ -1621,6 +1668,7 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
                     $scope.currentKf.motor[id] = $scope.axis[i].pos;
                 }
             }
+            validateMotorKeyframes();
         }
         $scope.currentKf.ev = $scope.camera.ev;
         $scope.modalExposure.hide();
@@ -1640,6 +1688,7 @@ angular.module('app', ['ionic', 'ngWebSocket', 'LocalStorageModule'])
             }
         }
         $scope.timelapse.keyframes.push(kf);
+        validateMotorKeyframes();
     }
     $scope.removeKeyframe = function(index) {
         $scope.timelapse.keyframes.splice(index, 1);

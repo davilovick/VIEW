@@ -189,7 +189,7 @@ var startWorker = function(port) {
                 worker.send({type:'port', port:port});
             }
             if (msg.type == 'event') {
-                console.log('event:', msg.event); //, msg.value ? msg.value.length : '');
+                if(msg.event != "callback") console.log('event:', msg.event); //, msg.value ? msg.value.length : '');
                 if (msg.event == 'connected') {
                     console.log("worker connected on port", worker.port);
                     worker.connected = true;
@@ -204,6 +204,12 @@ var startWorker = function(port) {
                     } else if(worker.model.match(/panasonic/i)) {
                         worker.supports.liveview = false;
                         worker.supports.destination = true;
+                    } else if(worker.model.match(/fuji/i)) {
+                        worker.supports.liveview = true;
+                        worker.supports.destination = true;
+                        camera.set('d38c', '1', null, worker); // PC mode
+                        camera.set('d207', '2', null, worker); // USB shutter control
+                        camera.set('expprogram', 'M', null, worker); // Manual mode
                     } else {
                         worker.supports.liveview = true;
                         worker.supports.destination = true;
@@ -485,6 +491,7 @@ camera.capture = function(options, callback) {
         options = {mode:'test'};
         var err = doEachCamera(function(port, isPrimary, worker) {
             if(!isPrimary) return;
+            if(worker.model.match(/fuji/i)) options.removeFromCamera = true;
             var capture = {
                 type: 'camera',
                 do: 'capture',
@@ -510,6 +517,7 @@ camera.capture = function(options, callback) {
                 options.saveRaw = imagePath + '-cam' + cameraIndex;
             }
             options.cameraIndex = cameraIndex;
+            if(worker.model.match(/fuji/i)) options.removeFromCamera = true;
             functionList.push(
                 (function(obj, isP, i){
                     return function(cb) {
@@ -570,6 +578,7 @@ camera.capture = function(options, callback) {
                                 var saveRaw = folder + '/' + name + padNumber(captureIndex, width) + 'c' + index;
                                 if(!options) options = {};
                                 options.saveRaw = saveRaw;
+                                if(worker.model.match(/fuji/i)) options.removeFromCamera = true;
                                 console.log("Saving RAW capture to", options.saveRaw);
                                 var capture = {
                                     type: 'camera',

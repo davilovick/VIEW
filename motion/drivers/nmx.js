@@ -70,6 +70,12 @@ var CMD_MOTOR_RESET = {
     hasAck: true,
     delay: 0
 }
+var CMD_MOTOR_MAX_SPEED = {
+    cmd: 0x07,
+    hasReponse: false,
+    hasAck: true,
+    delay: 0
+}
 var CMD_FIRMWARE_VERSION = {
     cmd: 0x64,
     hasReponse: true,
@@ -162,7 +168,6 @@ function getStatus() {
 
 function move(motorId, steps, callback) {
     if (motorRunning[motorId]) return console.log("NMX: motor already running");
-    console.log("NMX: moving motor " + motorId);
     if(!enabled[motorId]) enable(motorId);
     if(inJoystickMode) return joystickMode(false, function() {
         move(motorId, steps, callback);
@@ -171,6 +176,8 @@ function move(motorId, steps, callback) {
     if(steps == 0) { // a move of zero steps triggers a bug in the NMX causing it to move extreme distances
         return callback && callback(null, motorPos[motorId]);
     }
+    console.log("NMX: moving motor " + motorId + " by " + steps + " steps");
+
     //var m = new Buffer(5);
     //m.fill(0);
     //m[0] = 1;
@@ -220,7 +227,7 @@ function move(motorId, steps, callback) {
                             })
                         }
                     });
-                }, 200);
+                }, 300);
             })(motorId);
         } else {
             //keepAlive(true);
@@ -241,6 +248,25 @@ function setAccel(motorId, rate, callback) {
     var cmd = {
         motor: motorId,
         command: CMD_MOTOR_SET_ACCEL,
+        dataBuf: m
+    }
+
+    _queueCommand(cmd, function(err) {
+        if (callback) callback(err);
+    });
+}
+
+function setMaxSpeed(motorId, speed, callback) {
+    if (motorRunning[motorId]) return console.log("NMX: motor running");
+    console.log("NMX: setting max speed for " + motorId);
+
+    var m = new Buffer(2);
+    m.fill(0);
+    m.writeUInt16BE(speed, 0, 2);
+
+    var cmd = {
+        motor: motorId,
+        command: CMD_MOTOR_MAX_SPEED,
         dataBuf: m
     }
 
@@ -387,12 +413,16 @@ function firmwareVersion(callback) {
 
 function resetMotorPosition(motorId, callback) {
     if(!_dev || !_dev.connected) callback && callback("not connected");
+    if(inJoystickMode) return joystickMode(false, function() {
+        resetMotorPosition(motorId, callback);
+    });
     var cmd = {
         motor: motorId,
         command: CMD_MOTOR_RESET,
         readback: false
     }
     _queueCommand(cmd, function(err) {
+        motorPos[motorId] = 0;
         if (callback) callback(err);
     });
 }
@@ -419,14 +449,14 @@ function setAppMode(callback) {
     });
 }
 
-var enteringJoystickMode = null;
+var enteringJoystickMode = false;
 function joystickMode(en, callback) {
     console.log("NMX: setting joystick mode to ", en);
     var checkMode = function(tries){
         if(!tries) tries = 0;
         checkJoystickMode(function(jsMode){
             if(jsMode == en) {
-                enteringJoystickMode = null;
+                enteringJoystickMode = false;
                 callback && callback(null);
             } else {
                 tries++;
@@ -442,8 +472,8 @@ function joystickMode(en, callback) {
         });
     }
 
-    if(enteringJoystickMode === null) {
-        enteringJoystickMode = en ? true : false;
+    if(!enteringJoystickMode) {
+        enteringJoystickMode = true;
         var cmd = {
             motor: 0,
             command: CMD_JOYSTICK_MODE,
@@ -577,8 +607,8 @@ function readData(cb) {
         if(!_dev) return cb && cb("not connected");
         if (receiveBuf.length > 0) {
             //console.log("receiveBuf:", receiveBuf);
-            var readData = receiveBuf.shift();
-            if (cb) cb(null, readData);
+            var data = receiveBuf.shift();
+            if (cb) cb(null, data);
         } else {
             if (tries > 0) {
                 tries--;
@@ -605,7 +635,7 @@ function _connectSerial(path, callback) {
         _dev.state = "connected";
 
         _dev.port.once('disconnect', function(err) {
-            if (err && _dev.connected) {
+            if (err && _dev && _dev.connected) {
                 _dev = null;
                 nmx.emit("status", getStatus());
                 console.log("NMX: ERROR: NMX Disconnected: ", err);
@@ -672,9 +702,12 @@ function init() {
         //resetMotorPosition(1);
         //resetMotorPosition(2);
         //resetMotorPosition(3);
-        setAccel(1, 12675);
-        setAccel(2, 12675);
-        setAccel(3, 12675);
+        setAccel(1, 7500); // 2436.75 to 12675
+        setAccel(2, 7500);
+        setAccel(3, 7500);
+        setMaxSpeed(1, 3000);
+        setMaxSpeed(2, 3000);
+        setMaxSpeed(3, 3000);
     });
 }
 
@@ -840,13 +873,14 @@ function _runQueue(queueItem, rec) {
                     }, item.readbackDelayMs);
                 } else if(item.ack) {
                     readData(function(err, data) {
-                        //console.log("read data (discarded):", data);
+                        console.log("NMX: read data (discarded):", data);
                         item.callback && item.callback(null);
                         setTimeout(function() {
                             _runQueue(null, true);
                         }, COMMAND_SPACING_MS);
                     });
                 } else {
+                        console.log("NMX: continuing (no read):");
                     item.callback && item.callback(null);
                     setTimeout(function() {
                         _runQueue(null, true);
@@ -855,8 +889,8 @@ function _runQueue(queueItem, rec) {
             });
         })(nextItem);
     } else {
-        //console.log("NMX: queue complete");
-        _queueRunning = false;
+        console.log("NMX: queue complete:", !!rec);
+        if(rec) _queueRunning = false;
     }
 }
 

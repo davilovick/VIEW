@@ -13,7 +13,8 @@ var TLROOT = "/root/time-lapse";
 var Button = require('gpio-button');
 var gpio = require('linux-gpio');
 var _ = require('underscore');
-var suncalc = require('suncalc');
+//var suncalc = require('suncalc');
+var meeus = require('meeusjs');
 var eclipse = require('intervalometer/eclipse.js');
 
 var AUXTIP_OUT = 111;
@@ -123,9 +124,20 @@ function getDetails(file) {
     if(intervalometer.gpsData) {
         d.latitude = intervalometer.gpsData.lat;
         d.longitude = intervalometer.gpsData.lon;
-        d.sunPos = suncalc.getPosition(new Date(), d.latitude, d.longitude);
-        d.moonPos = suncalc.getMoonPosition(new Date(), d.latitude, d.longitude);
-        d.moonIllumination = suncalc.getMoonIllumination(new Date());
+
+        var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
+        var sunpos = {
+            azimuth: sunmoon.sunpos.az,
+            altitude: sunmoon.sunpos.alt,
+        }
+        var moonpos = {
+            azimuth: sunmoon.moonpos.az,
+            altitude: sunmoon.moonpos.alt,
+        }
+
+        d.sunPos = sunpos;
+        d.moonPos = moonpos;
+        d.moonIllumination = sunmoon.mooninfo.illumination;
     }
     return d;
 }
@@ -184,7 +196,7 @@ function doKeyframeAxis(axisName, axisSubIndex, setupFirst, interpolationMethod,
                 }
             });
             kfSet = interpolate[interpolationMethod](kfPoints, secondsSinceStart);
-            console.log("KF: " + axisName + " target: " + kfSet);
+            console.log("KF: " + axisName + (axisSubIndex != null ? axisSubIndex : '') + " target: " + kfSet);
         }
         var axisNameExtension = '';
         if(axisSubIndex != null) axisNameExtension = '-' + axisSubIndex;
@@ -212,9 +224,18 @@ function doKeyframeAxis(axisName, axisSubIndex, setupFirst, interpolationMethod,
 function calculateCelestialDistance(startPos, currentPos) {
     var panDiff = (currentPos.azimuth - startPos.azimuth) * 180 / Math.PI;
     var tiltDiff = (currentPos.altitude - startPos.altitude) * 180 / Math.PI;
+    var altDeg = currentPos.altitude * 180 / Math.PI;
+    var ease = 1;
+    if(altDeg < 5) {
+        if(altDeg < -10) {
+            ease = 0;
+        } else {
+            ease = (altDeg - -10) / 15;
+        }
+    }
     return {
-        pan: panDiff,
-        tilt: tiltDiff
+        pan: panDiff * ease,
+        tilt: tiltDiff * ease
     }
 }
 
@@ -255,11 +276,24 @@ function processKeyframes(setupFirst, callback) {
     if((intervalometer.currentProgram.keyframes == null || intervalometer.currentProgram.keyframes.length == 1) && intervalometer.currentProgram.tracking != 'none' && intervalometer.gpsData) {
         var trackingTarget = null;
         if(intervalometer.currentProgram.tracking == 'sun') {
-            var sunPos = suncalc.getPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
+            var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
+            var sunPos = {
+                azimuth: sunmoon.sunpos.az,
+                altitude: sunmoon.sunpos.alt,
+            }
             trackingTarget = calculateCelestialDistance(status.sunPos, sunPos);
         } else if(intervalometer.currentProgram.tracking == 'moon') {
-            var moonPos = suncalc.getMoonPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
+            var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
+            var moonPos = {
+                azimuth: sunmoon.moonpos.az,
+                altitude: sunmoon.moonpos.alt,
+            }
             trackingTarget = calculateCelestialDistance(status.moonPos, moonPos);
+        } else if(intervalometer.currentProgram.tracking == '15deg') {
+            trackingTarget = {
+                pan: (((new Date() / 1000) - status.startTime) / 3600) * 15,
+                tilt: 0
+            }
         }
         if(trackingTarget) {
             var panDegrees = trackingTarget.pan - status.trackingPan;
@@ -494,7 +528,7 @@ function checkCurrentPlan(restart) {
                 .nightIntervl
             */
             if(plan.mode == 'auto') {
-                status.rampMode = 'fixed';
+                status.rampMode = 'auto';
                 if(status.rampEv == null) status.rampEv = camera.lists.getEvFromSettings(camera.ptp.settings); 
             }
             if(plan.mode == 'lock') {
@@ -694,7 +728,7 @@ function runPhoto() {
                     intervalometer.autoSettings.paddingTimeMs = status.bufferSeconds * 1000 + 250; // add a quarter second for setting exposure
 
                     if(status.rampMode == "auto") {
-                        status.rampEv = exp.calculate(intervalometer.currentProgram.rampAlgorithm, status.rampEv, referencePhotoRes.ev, referencePhotoRes.histogram, camera.minEv(camera.ptp.settings, getEvOptions()), camera.maxEv(camera.ptp.settings, getEvOptions()));
+                        status.rampEv = exp.calculate(intervalometer.currentProgram.rampAlgorithm, intervalometer.currentProgram.rampMode, status.rampEv, referencePhotoRes.ev, referencePhotoRes.histogram, camera.minEv(camera.ptp.settings, getEvOptions()), camera.maxEv(camera.ptp.settings, getEvOptions()));
                         status.rampRate = exp.status.rate;
                     } else if(status.rampMode == "fixed") {
                         status.rampRate = 0;
@@ -866,8 +900,8 @@ intervalometer.run = function(program) {
                 status.message = "starting";
                 status.frames = 0;
                 status.first = program.rampMode == 'fixed' ? false : true; // triggers setup exposure before first capture unless fixed mode
-                status.framesRemaining = (program.intervalMode == "auto" && program.rampMode == "auto") ? Infinity : program.frames;
                 status.rampMode = program.rampMode == 'fixed' ? 'fixed' : 'auto';
+                status.framesRemaining = (program.intervalMode == "auto" && status.rampMode == "auto") ? Infinity : program.frames;
                 status.startTime = new Date() / 1000;
                 status.rampEv = null;
                 status.bufferSeconds = 0;
@@ -893,9 +927,16 @@ intervalometer.run = function(program) {
                 if(intervalometer.gpsData) {
                     status.latitude = intervalometer.gpsData.lat;
                     status.longitude = intervalometer.gpsData.lon;
-                    
-                    status.sunPos = suncalc.getPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
-                    status.moonPos = suncalc.getMoonPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
+        
+                    var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
+                    status.sunPos = {
+                        azimuth: sunmoon.sunpos.az,
+                        altitude: sunmoon.sunpos.alt,
+                    }
+                    status.moonPos = {
+                        azimuth: sunmoon.moonpos.az,
+                        altitude: sunmoon.moonpos.alt,
+                    }
                     status.trackingTilt = 0;
                     status.trackingPan = 0;
                 }
