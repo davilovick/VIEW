@@ -1,11 +1,13 @@
+require('rootpath')();
+
 var ns = require('node-serialize');
 var sqlite3 = require('sqlite3');
-var path = require('path');
-var homePath = path.resolve(process.env.HOME, 'Desktop/view');
 
-var dbSys = new sqlite3.Database(homePath + '/sqlite/view-system.db');
-var dbTl = new sqlite3.Database(homePath + '/sqlite/view-timelapse.db');
-var dbCache = new sqlite3.Database(homePath +'/tmp/view-cache.db');
+var filesystem = require('system/filesystem.js');
+
+var dbSys = new sqlite3.Database(filesystem.dbPath + '/view-system.db');
+var dbTl = new sqlite3.Database(filesystem.dbPath + '/view-timelapse.db');
+var dbCache = new sqlite3.Database(filesystem.tmpPath +'/view-cache.db');
 var fs = require('fs');
 var exec = require('child_process').exec;
 
@@ -59,7 +61,7 @@ dbCache.serialize(function(){
 
 var currentLog = null;
 try {
-	currentLog = fs.readFileSync("/home/view/current/logs/current.txt", {encoding:'utf8'});
+	currentLog = fs.readFileSync(homePath + "/current/logs/current.txt", {encoding:'utf8'});
 } catch(e) {
 	currentLog = null;
 }

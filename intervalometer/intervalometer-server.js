@@ -42,7 +42,9 @@ var camera = require('camera/camera.js');
 var noble = require('noble');
 var intervalometer = require('intervalometer/intervalometer.js');
 var fs = require('fs');
-var TLROOT = "/home/davilovick/Videos";
+var filesystem = require('system/filesystem.js');
+var TLROOT = filesystem.timelapsePath;
+
 var watchdog = require('system/watchdog.js');
 var net = require('net');
 

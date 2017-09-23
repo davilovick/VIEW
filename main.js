@@ -2,6 +2,7 @@ var VIEW_HARDWARE = true; // is this running on official VIEW hardware?
 
 console.log('Starting up...');
 
+var _ = require('./system/filesystem.js');
 var _ = require('underscore');
 var async = require('async');
 var exec = require('child_process').exec;

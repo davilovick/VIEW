@@ -9,7 +9,9 @@ var exp = require('intervalometer/exposure.js');
 var interpolate = require('intervalometer/interpolate.js');
 var fs = require('fs');
 var async = require('async');
-var TLROOT = "/home/davilovick/Videos";
+var filesystem = require('system/filesystem.js');
+
+var TLROOT = filesystem.timelapsePath;
 //TODO: var Button = require('gpio-button');
 //TODO: var gpio = require('linux-gpio');
 var _ = require('underscore');
@@ -854,6 +856,7 @@ intervalometer.run = function(program) {
                 } else {
                     tlIndex = parseInt(tlIndex) + 1;
                 }
+
                 fs.writeFileSync(TLROOT + '/index.txt', tlIndex.toString());
                 status.tlName = "tl-" + tlIndex;
                 console.log("==========> TIMELAPSE START", status.tlName);

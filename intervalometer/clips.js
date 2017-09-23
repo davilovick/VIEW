@@ -4,7 +4,11 @@ var image = require('camera/image/image.js');
 var core = require('intervalometer/intervalometer-client.js');
 var fs = require('fs');
 var async = require('async');
-var TLROOT = "/home/davilovick/Videos";
+
+
+var filesystem = require('system/filesystem.js');
+
+var TLROOT = filesystem.timelapsePath;
 
 var db = require('system/db.js');
 

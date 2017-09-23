@@ -1,6 +1,6 @@
 {
-  "name": "view", 
-  "version": "0.1.4", 
+  "name": "view",
+  "version": "1.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -15,9 +15,9 @@
     "events": "^1.1.1",
     "express": "^4.15.4",
     "geo-tz": "^3.3.3",
-    "gphoto2": "github:davilovick/node-gphoto2",
+    "gphoto2": "git://github.com/davilovick/node-gphoto2.git",
     "gps": "^0.4.0",
-    "jpeg-lum": "git://github.com/elijahparker/node-jpeg-lum.git",
+    "jpeg-lum": "^0.3.0",
     "jpeg-size": "0.0.1",
     "moment": "^2.18.1",
     "net": "^1.0.2",

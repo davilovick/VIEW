@@ -1,5 +1,6 @@
+require('rootpath')();
+
 var DCRAW = "dcraw";
-var TMPFOLDER = "/tmp/davilovickTL";
 var execFile = require('child_process').execFile;
 var epeg = require('epeg');
 var sharp = require('sharp');
@@ -7,13 +8,12 @@ var fs = require('fs');
 var luminance = require('jpeg-lum');
 var jpegSize = require('jpeg-size');
 
+var filesystem = require('system/filesystem.js');
+var TMPFOLDER = filesystem.tmpViewPath;
+
 var log2 = Math.log2 || function(x) {
     return Math.log(x) / Math.LN2;
 };
-
-if (!fs.existsSync(TMPFOLDER)) {
-    fs.mkdirSync(TMPFOLDER);
-}
 
 var TMP_IMAGE_INPUT = TMPFOLDER + "/tmp_image_in";
 var TMP_IMAGE_OUTPUT = TMPFOLDER + "/tmp_image_in.thumb.jpg";
