@@ -45,6 +45,8 @@ function axpGet(reg, callback) {
 }
 
 power.init = function(disableLight) {
+    //TODO:
+    /*
     axpSet(0x81, 0xf9); // fix issue with wifi power on
     axpSet(0x34, 0x57); // set chgled to blink
     axpSet(0x33, 0xdc); // set charge rate to 1.5A
@@ -58,6 +60,7 @@ power.init = function(disableLight) {
         power.chargeLight = 'enabled';
         axpSet(0x32, 0x0); // enable chgled
     }
+    */
 }
 
 function setPower(callback) {

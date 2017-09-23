@@ -7,7 +7,7 @@ var WebSocketServer = WebSocket.Server;
 var exec = require('child_process').exec;
 var fs = require('fs');
 var viewAccountName = "elijahparker";
-var CLIENT_SERVER_PORT = 80;
+var CLIENT_SERVER_PORT = 8080;
 var CLIENT_WS_PORT = 8101;
 
 var wss = new WebSocketServer({
@@ -19,7 +19,7 @@ var EventEmitter = require("events").EventEmitter;
 var app = new EventEmitter();
 app.remoteEnabled = false;
 
-express.use(Express.static('/home/view/current/frontend/www'));
+express.use(Express.static('frontend/www'));
 
 express.get('/socket/address', function(req, res) {
     var host = req.headers.host;

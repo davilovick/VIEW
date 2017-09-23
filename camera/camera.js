@@ -1,11 +1,12 @@
 require('rootpath')();
 var ptp = require('camera/ptp/ptp.js');
 var lists = require('camera/ptp/lists.js');
-var bulb = require('node-bulb');
+//TODO: var bulb = require('node-bulb');
 
 var camera = {};
 
-camera.bulb = bulb;
+//TODO: camera.bulb = bulb;
+camera.bulb = null; //TODO: BULB
 camera.ptp = ptp;
 camera.connected = ptp.connected;
 camera.lists = lists;
@@ -91,7 +92,8 @@ camera.testBulb = function() {
                     console.log("error occurred during capture: (" + (err || testError) + ")!");
                 }
             });
-            bulb(options, function(err, start_us, end_us, actual_us) {
+            //TODO: BULB
+            /*bulb(options, function(err, start_us, end_us, actual_us) {
                 if (!err && !testError) {
                     testStart.push(start_us);
                     testEnd.push(end_us);
@@ -100,7 +102,7 @@ camera.testBulb = function() {
                     testError = err;
                     console.log("error occurred during test: (" + (err || testError) + ")!");
                 }
-            });
+            });*/
         } else {
             testDone();
         }

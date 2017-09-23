@@ -38,11 +38,11 @@ event                  payload
 
 require('rootpath')();
 var camera = require('camera/camera.js');
-var motion = require('motion/motion.js');
+//TODO: var motion = require('motion/motion.js');
 var noble = require('noble');
 var intervalometer = require('intervalometer/intervalometer.js');
 var fs = require('fs');
-var TLROOT = "/root/time-lapse";
+var TLROOT = "/home/davilovick/Videos";
 var watchdog = require('system/watchdog.js');
 var net = require('net');
 
@@ -66,7 +66,7 @@ var server = net.createServer(function(c) {
     if(camera.ptp.sdPresent) {
       sendEvent('media.present', camera.ptp.sdMounted);
     }
-    sendEvent('motion.status', motion.status);
+    //TODO: sendEvent('motion.status', motion.status);
     while(ev = eventQueue.shift()) c.write(ev);
   } catch (e) {
     console.log("error during event queue write:", e);
@@ -288,8 +288,8 @@ function runCommand(type, args, callback, client) {
     case 'db.currentTimelapseFrames':
       callback(null, intervalometer.db.currentTimelapseFrames(args.cameraIndex));
       break;
-
-    case 'motion.move':
+//TODO: motion
+/*    case 'motion.move':
       motion.move(args.driver, args.motor, args.steps, callback);
       break;
     case 'motion.zero':
@@ -300,7 +300,7 @@ function runCommand(type, args, callback, client) {
       break;
     case 'motion.joystick':
       motion.joystick(args.driver, args.motor, args.speed, callback);
-      break;
+      break;*/
     case 'intervalometer.moveTracking':
       intervalometer.moveTracking(args.axis, args.degrees);
       break;
@@ -334,9 +334,7 @@ intervalometer.on('status', function(data) {
   if(!data.running && camera.ptp.model.match(/nikon/i)) camera.ptp.set("controlmode", 0, function(){});
   sendEvent('intervalometer.status', data);
   if(!data.running) {
-    motion.refresh(function(){
-      sendEvent('motion.status', motion.status);
-    });
+   //TODO:  sendEvent('motion.status', motion.status);
   }
 });
 intervalometer.on('error', function(data) {
@@ -400,6 +398,9 @@ camera.ptp.on('status', function(data) {
 camera.ptp.on('connectionError', function(data) {
   sendEvent('camera.connectionError', data);
 });
+
+//TODO: Motion
+/*
 camera.ptp.on('nmxSerial', function(status) {
     if (status == "connected") {
         console.log("NMX attached");
@@ -409,7 +410,7 @@ camera.ptp.on('nmxSerial', function(status) {
         var status = motion.nmx.getStatus();
         if(status.connected && status.type == "serial") motion.nmx.disconnect();
     }
-});
+});*/
 
 
 var scanTimerHandle = null;
@@ -439,21 +440,26 @@ function startScan() {
         scanTimerHandle3 = setTimeout(function() {
             if (noble.state == "poweredOn") {
                 //console.log("Starting BLE scan...");
-                noble.startScanning(motion.nmx.btServiceIds.concat(motion.gm1.btServiceIds), false, function(err){
-                    console.log("BLE scan started: ", err);
-                });
+                //TODO: 
+                // noble.startScanning(motion.nmx.btServiceIds.concat(motion.gm1.btServiceIds), false, function(err){
+                //     console.log("BLE scan started: ", err);
+                // });
             }
             btleScanStarting = false;
         }, 8000);
     } else {
         btleScanStarting = false;
-        var status = motion.nmx.getStatus();
-        if(status.connected && status.connectionType == "bt") {
-          console.log("CORE: disconnected NMX, bluetooth powered off");
-          motion.nmx.disconnect();
-          //status = motion.nmx.getStatus();
-          sendEvent('motion.status', motion.status);
-        }
+
+        //TODO: 
+        // var status = motion.nmx.getStatus();
+        // if(status.connected && status.connectionType == "bt") {
+        //   console.log("CORE: disconnected NMX, bluetooth powered off");
+        //   motion.nmx.disconnect();
+        //   //status = motion.nmx.getStatus();
+        //   sendEvent('motion.status', motion.status);
+        // }
+
+
         //if(wifi.btEnabled) {
         //    wifi.resetBt();
         //}
@@ -472,27 +478,28 @@ function btStateChange(state) {
             startScan()
         });
     } else if(state == "poweredOff") {
-        var status = motion.nmx.getStatus();
-        console.log("CORE: NMX status:", status);
-        if(status.connected && status.connectionType == "bt") {
-          console.log("CORE: disconnected NMX, bluetooth powered off");
-          motion.nmx.disconnect();
-          sendEvent('motion.status', motion.status);
-        }
-        var status = motion.gm1.getStatus();
-        console.log("CORE: GenieMini status:", status);
-        if(status.connected && status.connectionType == "bt") {
-          console.log("CORE: disconnected GenieMini, bluetooth powered off");
-          motion.gm1.disconnect();
-          sendEvent('motion.status', motion.status);
-        }
-        var status = motion.gm2.getStatus();
-        console.log("CORE: GenieMini status:", status);
-        if(status.connected && status.connectionType == "bt") {
-          console.log("CORE: disconnected GenieMini, bluetooth powered off");
-          motion.gm2.disconnect();
-          sendEvent('motion.status', motion.status);
-        }
+        //TODO: 
+        // var status = motion.nmx.getStatus();
+        // console.log("CORE: NMX status:", status);
+        // if(status.connected && status.connectionType == "bt") {
+        //   console.log("CORE: disconnected NMX, bluetooth powered off");
+        //   motion.nmx.disconnect();
+        //   sendEvent('motion.status', motion.status);
+        // }
+        // var status = motion.gm1.getStatus();
+        // console.log("CORE: GenieMini status:", status);
+        // if(status.connected && status.connectionType == "bt") {
+        //   console.log("CORE: disconnected GenieMini, bluetooth powered off");
+        //   motion.gm1.disconnect();
+        //   sendEvent('motion.status', motion.status);
+        // }
+        // var status = motion.gm2.getStatus();
+        // console.log("CORE: GenieMini status:", status);
+        // if(status.connected && status.connectionType == "bt") {
+        //   console.log("CORE: disconnected GenieMini, bluetooth powered off");
+        //   motion.gm2.disconnect();
+        //   sendEvent('motion.status', motion.status);
+        // }
     }
 }
 var btConnecting = false;
@@ -505,39 +512,41 @@ function btDiscover(peripheral) {
     btConnecting = false;
     btConnectingTries = 0;
     //console.log('ble', peripheral);
-    var connectGM = function(cb) {
-      var status = motion.gm1.getStatus();
-      if(status.connected && status.connectionType == "bt") {
-        var status = motion.gm2.getStatus();
-        if(status.connected && status.connectionType == "bt") {
-          stopScan();
-        } else {
-          btConnecting = true;
-          motion.gm2.connect(peripheral, function(connected) {
-            btConnecting = false;
-          });
-        }
-      } else {
-        btConnecting = true;
-        motion.gm1.connect(peripheral, function(connected) {
-          btConnecting = false;
-        });
-      }
-    }
-    var status = motion.nmx.getStatus();
-    if(status.connected && status.connectionType == "bt") {
-      connectGM();
-    } else {
-      btConnecting = true;
-      motion.nmx.connect(peripheral, function(connected) {
-        btConnecting = false;
-        if(connected) {
-          stopScan();
-        } else {
-          connectGM();
-        }
-      });
-    }
+   
+    //TODO: 
+    // var connectGM = function(cb) {
+    //   var status = motion.gm1.getStatus();
+    //   if(status.connected && status.connectionType == "bt") {
+    //     var status = motion.gm2.getStatus();
+    //     if(status.connected && status.connectionType == "bt") {
+    //       stopScan();
+    //     } else {
+    //       btConnecting = true;
+    //       motion.gm2.connect(peripheral, function(connected) {
+    //         btConnecting = false;
+    //       });
+    //     }
+    //   } else {
+    //     btConnecting = true;
+    //     motion.gm1.connect(peripheral, function(connected) {
+    //       btConnecting = false;
+    //     });
+    //   }
+    // }
+    // var status = motion.nmx.getStatus();
+    // if(status.connected && status.connectionType == "bt") {
+    //   connectGM();
+    // } else {
+    //   btConnecting = true;
+    //   motion.nmx.connect(peripheral, function(connected) {
+    //     btConnecting = false;
+    //     if(connected) {
+    //       stopScan();
+    //     } else {
+    //       connectGM();
+    //     }
+    //   });
+    // }
 }
 
 function cleanUpBt() {
@@ -558,18 +567,19 @@ function setUpBt() {
 }
 setUpBt();
 
-motion.nmx.connect();
+//TODO: 
+// motion.nmx.connect();
 
-motion.on('status', function(status) {
-    sendEvent('motion.status', status);
-    if (status.connected) {
-        stopScan();
-    } else {
-        //wifi.resetBt(function(){
-            startScan();
-        //});
-    }
-});
+// motion.on('status', function(status) {
+//     sendEvent('motion.status', status);
+//     if (status.connected) {
+//         stopScan();
+//     } else {
+//         //wifi.resetBt(function(){
+//             startScan();
+//         //});
+//     }
+// });
 
 
 /**

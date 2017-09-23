@@ -131,7 +131,7 @@ function connect() {
     });
     client.on('error', function(err) {
         if(err && err.code && (err.code == 'ECONNREFUSED' || err.code == 'ENOENT')) {
-            console.log("Error: server not ready");
+            console.log("Error: server not readyserver not ready");
             setTimeout(connect, 1000);
         } else {
             console.log("error: ", err);

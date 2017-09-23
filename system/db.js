@@ -1,8 +1,11 @@
 var ns = require('node-serialize');
 var sqlite3 = require('sqlite3');
-var dbSys = new sqlite3.Database('/var/local/sqlite/view-system.db');
-var dbTl = new sqlite3.Database('/var/local/sqlite/view-timelapse.db');
-var dbCache = new sqlite3.Database('/tmp/view-cache.db');
+var path = require('path');
+var homePath = path.resolve(process.env.HOME, 'Desktop/view');
+
+var dbSys = new sqlite3.Database(homePath + '/sqlite/view-system.db');
+var dbTl = new sqlite3.Database(homePath + '/sqlite/view-timelapse.db');
+var dbCache = new sqlite3.Database(homePath +'/tmp/view-cache.db');
 var fs = require('fs');
 var exec = require('child_process').exec;
 
@@ -246,6 +249,7 @@ exports.setTimelapseFrame = function(clipId, evCorrection, details, cameraNumber
 
 	dbTl.get("SELECT frames, thumbnail, primary_camera FROM clips WHERE id = '" + clipId + "'", function(err, data){
 		if(err || !data) {
+			console.log("Callback ERROR: ", callback);
 			callback(err);
 		} else {
 			var frames = 0;

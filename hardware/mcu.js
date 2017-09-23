@@ -41,48 +41,34 @@ mcu.setTz = function(tz) {
 }
 
 mcu.setDate = function(date) {
-	var date = moment(date).utc();
+	var date = moment(date);
 	var time = moment().utc();
-	console.log("MCU: setting date to ", date.format("YYYY-MM-DD") + ' ' + time.format("HH:mm:ss"), " UTC");
     exec('date -u -s "' + date.format("YYYY-MM-DD") + ' ' + time.format("HH:mm:ss") + '"');
 }
 
 mcu.setTime = function(time) {
-	var time = moment(time).utc();
+	var time = moment(time);
 	var date = moment().utc();
-	console.log("MCU: setting time to ", date.format("YYYY-MM-DD") + ' ' + time.format("HH:mm:ss"), " UTC");
-    exec('date -u -s "' + date.format("YYYY-MM-DD") + ' ' + time.format("HH:mm:ss") + '"');
-}
-
-mcu.setDateTime = function(time) {
-	var time = moment(time).utc();
-	var date = moment(time).utc();
-	console.log("MCU: setting date & time to ", date.format("YYYY-MM-DD") + ' ' + time.format("HH:mm:ss"), " UTC");
     exec('date -u -s "' + date.format("YYYY-MM-DD") + ' ' + time.format("HH:mm:ss") + '"');
 }
 
 mcu.validCoordinates = function() {
 	var lat = null;
 	var lon = null;
-	var alt = null;
 	if(gps.state.fix && gps.state.lat !== null && gps.state.lon !== null) {
 		lat = gps.state.lat;
 		lon = gps.state.lon;
-		alt = gps.state.alt || 0;
 	} else if(mcu.lastGpsFix && !mcu.lastGpsFix.fromDb && mcu.lastGpsFix.lat !== null && mcu.lastGpsFix.lon !== null) {
 		lat = mcu.lastGpsFix.lat;
 		lon = mcu.lastGpsFix.lon;
-		alt = mcu.lastGpsFix.alt || 0;
 	} else if((power.gpsEnabled == 'disabled' || !mcu.gpsAvailable) && mcu.customLatitude !== null && mcu.customLongitude != null) {
 		lat = mcu.customLatitude;
 		lon = mcu.customLongitude;
-		alt = 0;
 	}
 	if(lat !== null && lon != null) {
 		return {
 			lat: lat,
-			lon: lon,
-			alt: alt
+			lon: lon
 		}
 	} else {
 		return null;
@@ -128,7 +114,8 @@ function _parseData(data) {
 			if(gps.state.fix && gps.state.lat !== null && gps.state.lon !== null) {
 				mcu.lastGpsFix = _.clone(gps.state);
 				if(!gpsFix) {
-					mcu.setDateTime(mcu.lastGpsFix.time);
+					mcu.setTime(mcu.lastGpsFix.time);
+					mcu.setDate(mcu.lastGpsFix.time);
 					var tz = geoTz.tz(mcu.lastGpsFix.lat, mcu.lastGpsFix.lon);
 					if(tz && process.env.TZ != tz) {
 						process.env.TZ = tz;

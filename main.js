@@ -1,6 +1,3 @@
-/*jslint node:true,vars:true,bitwise:true */
-'use strict';
-
 var VIEW_HARDWARE = true; // is this running on official VIEW hardware?
 
 console.log('Starting up...');
@@ -18,28 +15,24 @@ console.log('System modules loaded');
 
 require('rootpath')();
 var lists = require('./camera/ptp/lists.js');
-var updates = require('./system/updates.js');
+//var updates = require('./system/updates.js');
 var clips = require('./intervalometer/clips.js');
-var eclipse = require('./intervalometer/eclipse.js');
 var core = require('./intervalometer/intervalometer-client.js');
 var image = require('./camera/image/image.js');
 if (VIEW_HARDWARE) {
-    var light = require('./hardware/light.js');
-    var oled = require('./hardware/oled.js');
+    // var light = require('./hardware/light.js');
+    // var oled = require('./hardware/oled.js');
     var ui = require('./interface/ui.js');
     var help = require('./interface/help.js');
-    var inputs = require('./hardware/inputs.js');
+    //var inputs = require('./hardware/inputs.js');
     var power = require('./hardware/power.js');
     var mcu = require('./hardware/mcu.js');
 }
 
-var wifi = require('./system/wifi.js');
-if(power) wifi.power = power; // allow wifi module to control power
+// var wifi = require('./system/wifi.js');
+// if(power) wifi.power = power; // allow wifi module to control power
 var app = require("./system/app.js");
 var db = require("./system/db.js");
-
-//var suncalc = require('suncalc');
-var meeus = require('meeusjs');
 
 var previewImage = null;
 var liveviewOn = false;
@@ -48,188 +41,178 @@ var gpsExists = null;
 var cache = {};
 var gestureString = "";
 
-var Segfault = require('segfault');
-Segfault.registerHandler("segfault.log");
-//var Segfault = require('segfault-handler');
-//Segfault.registerHandler("crash.log", function(signal, address, stack) {
-//    console.log("recevied SIGSEGV, killing process...");
-//    process.kill(process.pid, 'SIGKILL');
-//});
 var nodeCleanup = require('node-cleanup');
 
 process.stdin.resume();
 
 console.log('Modules loaded.');
 
-updates.cleanup(); // cleanup old version installations
 
 if (VIEW_HARDWARE) {
-    updates.updateUBoot(function(err) {
-        updates.updateKernel(function(err, reboot) {
-            if(reboot) {
-                closeSystem(function(){
-                    power.reboot();
-                });
-            }
-        });
-    });
-    updates.installIcons();
-    oled.init();
-    mcu.init(function(err){
-        var useInputsForKnob = err ? true : false;
-        console.log("Using MCU for knob: ", !useInputsForKnob);
-        inputs.start({knob:useInputsForKnob, mcu: mcu});
-    });
+    //TODO:
+    // updates.updateUBoot(function(err) {
+    //     updates.updateKernel(function(err, reboot) {
+    //         if(reboot) {
+    //             closeSystem(function(){
+    //                 power.reboot();
+    //             });
+    //         }
+    //     });
+    // });
+    // updates.installIcons();
+    // oled.init();
+    // mcu.init(function(err){
+    //     var useInputsForKnob = err ? true : false;
+    //     console.log("Using MCU for knob: ", !useInputsForKnob);
+    //     inputs.start({knob:useInputsForKnob, mcu: mcu});
+    // });
 
-    var configureWifi = function() {
-        db.get('wifi-ap-name', function(err, wifiApName) {
-            console.log("wifi-ap-name:", wifiApName);
-            wifi.setApName(wifiApName);
-            db.get('wifi-status', function(err, wifiStatus) {
-                if(wifiStatus) {
-                    if(wifiStatus.enabled) {
-                        wifi.btEnabled = true;
-                        wifi.enable(function(){
-                            setTimeout(function(){
-                                db.get('bt-status', function(err, status) {
-                                    if(status && status.enabled) {
-                                        wifi.enableBt();
-                                        console.log("MAIN: enabling bluetooth", wifi.btEnabled);
-                                    } else {
-                                        wifi.disableBt();
-                                        console.log("MAIN: disabling bluetooth", wifi.btEnabled);
-                                    }
-                                    if(!wifi.connected) {
-                                        if(wifiStatus.apMode) {
-                                            wifi.enableAP();
-                                        }
-                                        if(wifiStatus.connect) {
-                                            wifi.connect(wifiStatus.connect, wifiStatus.password);
-                                        }
-                                    }
-                                });
-                            },5000);
-                        });
-                    } else {
-                        wifi.disable();
-                    }
-                } else {
-                    wifi.btEnabled = true;
-                    wifi.enable(function(){
-                        setTimeout(function(){
-                            db.get('bt-status', function(err, status) {
-                                if(status && status.enabled) {
-                                    wifi.enableBt();
-                                    console.log("MAIN: enabling bluetooth", wifi.btEnabled);
-                                } else {
-                                    wifi.disableBt();
-                                    console.log("MAIN: disabling bluetooth", wifi.btEnabled);
-                                }
-                            });
+    //TODO:
+    // var configureWifi = function() {
+    //     db.get('wifi-ap-name', function(err, wifiApName) {
+    //         console.log("wifi-ap-name:", wifiApName);
+    //         wifi.setApName(wifiApName);
+    //         db.get('wifi-status', function(err, wifiStatus) {
+    //             if(wifiStatus) {
+    //                 if(wifiStatus.enabled) {
+    //                     wifi.btEnabled = true;
+    //                     wifi.enable(function(){
+    //                         db.get('bt-status', function(err, status) {
+    //                             if(status && status.enabled) {
+    //                                 wifi.enableBt();
+    //                             } else {
+    //                                 wifi.disableBt();
+    //                             }
+    //                         });
+    //                         setTimeout(function(){
+    //                             if(!wifi.connected) {
+    //                                 if(wifiStatus.apMode) {
+    //                                     wifi.enableAP();
+    //                                 }
+    //                                 if(wifiStatus.connect) {
+    //                                     wifi.connect(wifiStatus.connect, wifiStatus.password);
+    //                                 }
+    //                             }
+    //                         },5000);
+    //                     });
+    //                 } else {
+    //                     wifi.disable();
+    //                 }
+    //             } else {
+    //                 wifi.btEnabled = true;
+    //                 wifi.enable(function(){
+    //                     setTimeout(function(){
+    //                         db.get('bt-status', function(err, status) {
+    //                             if(status && status.enabled) {
+    //                                 wifi.enableBt();
+    //                             } else {
+    //                                 wifi.disableBt();
+    //                             }
+    //                         });
 
-                            if(!wifi.connected) {
-                                wifi.enableAP();
-                            }
-                        },5000);
-                    });
-                }
-            });
-        });
-    }
-    configureWifi();
+    //                         if(!wifi.connected) {
+    //                             wifi.enableAP();
+    //                         }
+    //                     },5000);
+    //                 });
+    //             }
+    //         });
+    //     });
+    // }
+    // configureWifi();
 
-    var ERRORCOMPILING = "An error occurred while building the latest libgphoto2 code for camera support. Please report this to support@timelapseplus.com.\nSystem message:\n";
-    var SUCCESS = "The camera support library has been successfully updated!  Your VIEW intervalometer can now support the latest camera models.";
-    var updateLibGPhoto2 = function() {
-        ui.confirmationPrompt("Update camera support library?", "Update", "cancel", help.updateCameraLibrary, function(cb){
-            cb();
-            var backupStatus = ui.defaultStatusString;
-            ui.defaultStatus("updating camera support");
-            console.log("installing libgphoto2...");
-            updates.installLibGPhoto(function(err){
-                ui.defaultStatus(backupStatus);
-                process.nextTick(function(){
-                    if(err) { // error compiling
-                        console.log("error installing libgphoto2", err);
-                        ui.alert('Error', ERRORCOMPILING + err);
-                    } else {
-                        console.log("successfully installed libgphoto2");
-                        ui.alert('Success', SUCCESS);
-                    }
-                });
-            });
-        }, null);
-    }
+    // var ERRORCOMPILING = "An error occurred while building the latest libgphoto2 code for camera support. Please report this to support@timelapseplus.com.\nSystem message:\n";
+    // var SUCCESS = "The camera support library has been successfully updated!  Your VIEW intervalometer can now support the latest camera models.";
+    // var updateLibGPhoto2 = function() {
+    //     ui.confirmationPrompt("Update camera support library?", "Update", "cancel", help.updateCameraLibrary, function(cb){
+    //         cb();
+    //         var backupStatus = ui.defaultStatusString;
+    //         ui.defaultStatus("updating camera support");
+    //         console.log("installing libgphoto2...");
+    //         updates.installLibGPhoto(function(err){
+    //             ui.defaultStatus(backupStatus);
+    //             process.nextTick(function(){
+    //                 if(err) { // error compiling
+    //                     console.log("error installing libgphoto2", err);
+    //                     ui.alert('Error', ERRORCOMPILING + err);
+    //                 } else {
+    //                     console.log("successfully installed libgphoto2");
+    //                     ui.alert('Success', SUCCESS);
+    //                 }
+    //             });
+    //         });
+    //     }, null);
+    // }
 
-    updates.checkLibGPhotoUpdate(function(err, needUpdate){
-        if(!err && needUpdate) {
-            console.log("libgphoto2 update available!");
-            updateLibGPhoto2();
-        } else {
-            console.log("error checking libgphoto2 version:", err);
-        }
-    });
+    // updates.checkLibGPhotoUpdate(function(err, needUpdate){
+    //     if(!err && needUpdate) {
+    //         console.log("libgphoto2 update available!");
+    //         updateLibGPhoto2();
+    //     } else {
+    //         console.log("error checking libgphoto2 version:", err);
+    //     }
+    // });
 
-    var wifiWasDisabled = false;
-    var wifiConnectionTime = 0;
-    wifi.on('connect', function(ssid) {
-        app.enableRemote();
-        oled.setIcon('wifi', true);
-        wifiConnectionTime = new Date().getTime();
-        ui.status('wifi connected to ' + ssid);
-        if(ssid.substr(0, 7) == "DIRECT-") core.connectSonyWifi();
-        ui.reload();
-    });
-    wifi.on('enabled', function(reload) {
-        app.disableRemote();
-        oled.setIcon('wifi', false);
-        if(wifiWasDisabled) {
-            wifiWasDisabled = false;
-            core.resetBt();
-            wifi.resetBt();
-        }
-        if(reload) ui.reload();
-    });
-    wifi.on('disabled', function(reload) {
-        wifiWasDisabled = true;
-        app.disableRemote();
-        oled.setIcon('wifi', false);
-        if(reload) ui.reload();
-    });
-    wifi.on('disconnect', function(previousConnection) {
-        app.disableRemote();
-        oled.setIcon('wifi', false);
-        ui.status('wifi disconnected');
-        if(previousConnection && previousConnection.address) {
-            var currentTime = wifiConnectionTime = new Date().getTime();
-            if(currentTime - wifiConnectionTime < 30 * 1000) {
-                // show alert -- authentication probably failed
-                ui.alert('Error', "WiFi failed to connect to " + previousConnection.ssid + ".\nTry again, double-checking that the password is correct.\nNote: if it continues to fail to connect, try a different access point if possible.  There might be an issue with connection to Apple Airport wireless routers.  This will hopefully be resolved in the near future.");
-            } else {
-                wifiConnectionTime = new Date().getTime();
-                wifi.disable(function(){
-                    setTimeout(configureWifi, 2000);
-                });
-            }
-        }
-        ui.reload();
-    });
+    // var wifiWasDisabled = false;
+    // var wifiConnectionTime = 0;
+    // wifi.on('connect', function(ssid) {
+    //     app.enableRemote();
+    //     oled.setIcon('wifi', true);
+    //     wifiConnectionTime = new Date().getTime();
+    //     ui.status('wifi connected to ' + ssid);
+    //     if(ssid.substr(0, 7) == "DIRECT-") core.connectSonyWifi();
+    //     ui.reload();
+    // });
+    // wifi.on('enabled', function(reload) {
+    //     app.disableRemote();
+    //     oled.setIcon('wifi', false);
+    //     if(wifiWasDisabled) {
+    //         wifiWasDisabled = false;
+    //         core.resetBt();
+    //         wifi.resetBt();
+    //     }
+    //     if(reload) ui.reload();
+    // });
+    // wifi.on('disabled', function(reload) {
+    //     wifiWasDisabled = true;
+    //     app.disableRemote();
+    //     oled.setIcon('wifi', false);
+    //     if(reload) ui.reload();
+    // });
+    // wifi.on('disconnect', function(previousConnection) {
+    //     app.disableRemote();
+    //     oled.setIcon('wifi', false);
+    //     ui.status('wifi disconnected');
+    //     if(previousConnection && previousConnection.address) {
+    //         var currentTime = wifiConnectionTime = new Date().getTime();
+    //         if(currentTime - wifiConnectionTime < 30 * 1000) {
+    //             // show alert -- authentication probably failed
+    //             ui.alert('Error', "WiFi failed to connect to " + previousConnection.ssid + ".\nTry again, double-checking that the password is correct.\nNote: if it continues to fail to connect, try a different access point if possible.  There might be an issue with connection to Apple Airport wireless routers.  This will hopefully be resolved in the near future.");
+    //         } else {
+    //             wifiConnectionTime = new Date().getTime();
+    //             wifi.disable(function(){
+    //                 setTimeout(configureWifi, 2000);
+    //             });
+    //         }
+    //     }
+    //     ui.reload();
+    // });
 
     power.on('charging', function(status) {
-        oled.chargeStatus(status);
+        //TODO: oled.chargeStatus(status);
     });
 
     power.on('warning', function(status) {
-        if(status) ui.status('low battery');
+        //TODO: if(status) ui.status('low battery');
     });
 
     power.on('percentage', function(percentage) {
-        oled.batteryPercentage(percentage);
+        //TODO: oled.batteryPercentage(percentage);
     });
 
     power.on('shutdown', function() {
-        console.log("CRTICIAL BATTERY LEVEL: shutting down now!");
-        shutdownNow();
+        //TODO: console.log("CRTICIAL BATTERY LEVEL: shutting down now!");
+        //TODO: shutdownNow();
     });
 
     var rampingOptions = {
@@ -253,28 +236,6 @@ if (VIEW_HARDWARE) {
             })
         }, {
             name: "Timelapse Mode",
-            value: "Auto Sunset",
-            help: help.rampingOptions,
-            action: ui.set(core.currentProgram, 'rampMode', 'sunset', function(){
-                core.currentProgram = reconfigureProgram(core.currentProgram);
-                ui.back();
-            }),
-            condition: function() {
-                return core.currentProgram.rampAlgorithm == 'lrt';
-            }
-        }, {
-            name: "Timelapse Mode",
-            value: "Auto Sunrise",
-            help: help.rampingOptions,
-            action: ui.set(core.currentProgram, 'rampMode', 'sunrise', function(){
-                core.currentProgram = reconfigureProgram(core.currentProgram);
-                ui.back();
-            }),
-            condition: function() {
-                return core.currentProgram.rampAlgorithm == 'lrt';
-            }
-        }, {
-            name: "Timelapse Mode",
             value: "Eclipse Mode",
             help: help.rampingOptions,
             action: ui.set(core.currentProgram, 'rampMode', 'eclipse', function(){
@@ -291,8 +252,6 @@ if (VIEW_HARDWARE) {
         if(!program.exposurePlans) program.exposurePlans = [];
         if(program.rampMode == 'auto') {
             program.exposurePlans = [];
-        } else if(program.rampAlgorithm != 'lrt' && (program.rampMode == 'sunset' || program.rampMode == 'sunrise')) {
-            program.rampMode = 'auto';
         } else if(program.rampMode == 'eclipse') {
             var coords = mcu.validCoordinates();
             program.exposurePlans = [];
@@ -375,10 +334,7 @@ if (VIEW_HARDWARE) {
             name: "Ramping Algorithm",
             value: "PID Luminance",
             help: help.rampingAlgorithmLuminance,
-            action: ui.set(core.currentProgram, 'rampAlgorithm', 'lum', function(){
-                core.currentProgram = reconfigureProgram(core.currentProgram);
-                ui.back();
-            }),
+            action: ui.set(core.currentProgram, 'rampAlgorithm', 'lum')
         }, {
             name: "Ramping Algorithm",
             value: "LRTimelapse",
@@ -506,93 +462,34 @@ if (VIEW_HARDWARE) {
         }]
     }
 
-    var trackingOptions = {
-        name: "Tracking",
-        type: "options",
-        items: [{
-            name: "Motion Tracking",
-            value: "disabled",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', 'none')
-        }, {
-            name: "Motion Tracking",
-            value: "15°/hour pan",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', '15deg')
-        }, {
-            name: "Motion Tracking",
-            value: "Follow Sun",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', 'sun')
-        }, {
-            name: "Motion Tracking",
-            value: "Follow Moon",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', 'moon')
-        }]
-    }
-
-    var trackingOptions = {
-        name: "Tracking",
-        type: "options",
-        items: [{
-            name: "Motion Tracking",
-            value: "disabled",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', 'none')
-        }, {
-            name: "Motion Tracking",
-            value: "15°/hour pan",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', '15deg')
-        }, {
-            name: "Motion Tracking",
-            value: "Follow Sun",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', 'sun')
-        }, {
-            name: "Motion Tracking",
-            value: "Follow Moon",
-            help: help.trackingOptions,
-            action: ui.set(core.currentProgram, 'tracking', 'moon')
-        }]
-    }
-
     var trackingPanMotorMenu = function(cb) {
         var m = {
             name: "Tracking Pan",
-            type: "options"
+            type: "menu"
         }
         m.items = [];
         m.items.push({
-            name: "Tracking Pan Motor",
-            value: "Disabled",
+            name: "Disabled",
+            value: "none",
             help: help.trackingPanMotor,
-            action: ui.set(core.currentProgram, 'trackingPanMotor', 'none', function() {
-                    ui.back();
-                    ui.back();
-            })
+            action: ui.set(core.currentProgram, 'trackingPanMotor', 'none')
         });
         for(var i = 0; i < core.motionStatus.motors.length; i++) {
             var motor = core.motionStatus.motors[i];
             if(motor.connected) {
                 m.items.push({
-                    name: "Tracking Pan Motor",
-                    //name: motor.driver + " Axis" + motor.motor + "",
-                    value: motor.driver + " Axis" + motor.motor + "", //motor.driver + motor.motor,
+                    name: motor.driver + " Axis" + motor.motor + "",
+                    value: motor.driver + motor.motor,
                     help: help.trackingPanMotor,
                     action: ui.set(core.currentProgram, 'trackingPanMotor', motor.driver + motor.motor, function(){
-                        ui.back();
                         ui.back();
                     })
                 });
                 m.items.push({
-                    name: "Tracking Pan Motor",
-                    //name: motor.driver + " Axis" + motor.motor + " (reverse)",
-                    value: motor.driver + " Axis" + motor.motor + " (rev)",//motor.driver + motor.motor,
+                    name: motor.driver + " Axis" + motor.motor + " (reverse)",
+                    value: motor.driver + motor.motor,
                     help: help.trackingPanMotor,
                     action: ui.set(core.currentProgram, 'trackingPanMotor', motor.driver + motor.motor + 'r', function(){
-                        ui.back();
                         ui.back();
                     })
                 });
@@ -604,36 +501,31 @@ if (VIEW_HARDWARE) {
     var trackingTiltMotorMenu = function(cb) {
         var m = {
             name: "Tracking Tilt",
-            type: "options"
+            type: "menu"
         }
         m.items = [];
         m.items.push({
-            name: "Tracking Tilt Motor",
-            value: "Disabled",
+            name: "Disabled",
+            value: "none",
             help: help.trackingTiltMotor,
-            action: ui.set(core.currentProgram, 'trackingTiltMotor', 'none', function() {
-                ui.back();
-                ui.back();
-            })
+            action: ui.set(core.currentProgram, 'trackingTiltMotor', 'none')
         });
         for(var i = 0; i < core.motionStatus.motors.length; i++) {
             var motor = core.motionStatus.motors[i];
             if(motor.connected) {
                 m.items.push({
-                    name: "Tracking Tilt Motor",
-                    value: motor.driver + " Axis" + motor.motor + "",
+                    name: motor.driver + " Axis" + motor.motor + "",
+                    value: motor.driver + motor.motor,
                     help: help.trackingTiltMotor,
                     action: ui.set(core.currentProgram, 'trackingTiltMotor', motor.driver + motor.motor, function() {
-                        ui.back();
                         ui.back();
                     })
                 });
                 m.items.push({
-                    name: "Tracking Tilt Motor",
-                    value: motor.driver + " Axis" + motor.motor + " (rev)",
+                    name: motor.driver + " Axis" + motor.motor + " (reverse)",
+                    value: motor.driver + motor.motor,
                     help: help.trackingTiltMotor,
                     action: ui.set(core.currentProgram, 'trackingTiltMotor', motor.driver + motor.motor + 'r', function() {
-                        ui.back();
                         ui.back();
                     })
                 });
@@ -1361,6 +1253,7 @@ if (VIEW_HARDWARE) {
         }]
     }
 
+
     var rampingOptionsMenu = {
         name: "Ramping Options",
         type: "menu",
@@ -1373,7 +1266,7 @@ if (VIEW_HARDWARE) {
             help: help.rampingAlgorithm,
             action: rampingAlgorithm,
             condition: function() {
-                return core.currentProgram.rampMode == 'auto' || core.currentProgram.rampMode == 'sunrise' || core.currentProgram.rampMode == 'sunset';
+                return core.currentProgram.rampMode == 'auto';
             }
         }, {
             name: isoValueDisplay("Maximum ISO", core.currentProgram, 'isoMax'),
@@ -1416,7 +1309,7 @@ if (VIEW_HARDWARE) {
             var stats, ev, exiting = false;
 
             function captureButtonHandler(b) {
-                oled.activity();
+                //TODO: oled.activity();
                 power.activity();
                 if (b == 1 || b == 4) {
                     exiting = true;
@@ -1424,8 +1317,8 @@ if (VIEW_HARDWARE) {
                     blockInputs = false;
                     core.lvOff();
                     console.log("(exposure) disabling handlers...");
-                    inputs.removeListener('B', captureButtonHandler);
-                    inputs.removeListener('D', captureDialHandler);
+                    //TODO: inputs.removeListener('B', captureButtonHandler);
+                    //TODO: inputs.removeListener('D', captureDialHandler);
                     setTimeout(cb, 500);
                 } else if (b == 2) {
                     if (core.cameraZoomed) {
@@ -1437,7 +1330,7 @@ if (VIEW_HARDWARE) {
             }
 
             function captureDialHandler(d) {
-                oled.activity();
+                //TODO: oled.activity();
                 power.activity();
                 //console.log("captureDialHandler", d, stats, ev);
                 if (core.photo && core.cameraZoomed) {
@@ -1473,13 +1366,13 @@ if (VIEW_HARDWARE) {
             liveviewOn = true;
             core.preview();
             console.log("(exposure) started liveview, getting settings...");
-            inputs.on('B', captureButtonHandler);
+            //TODO: inputs.on('B', captureButtonHandler);
             core.getSettings(function() {
                 console.log("(exposure) done getting settings, enabling knob handler");
                 stats = lists.evStats(core.cameraSettings);
                 ev = stats.ev;
                 if(exiting) return;
-                inputs.on('D', captureDialHandler);
+                //TODO: inputs.on('D', captureDialHandler);
             });
         }
     }
@@ -1806,14 +1699,14 @@ if (VIEW_HARDWARE) {
             action: dayInterval,
             help: help.dayInterval,
             condition: function() {
-                return core.currentProgram.intervalMode == 'auto' && (core.currentProgram.rampMode == 'auto' || core.currentProgram.rampMode == 'sunrise' || core.currentProgram.rampMode == 'sunset');
+                return core.currentProgram.intervalMode == 'auto' && core.currentProgram.rampMode == 'auto';
             }
         }, {
             name: valueDisplay("Night Interval", core.currentProgram, 'nightInterval'),
             action: nightInterval,
             help: help.nightInterval,
             condition: function() {
-                return core.currentProgram.intervalMode == 'auto' && (core.currentProgram.rampMode == 'auto' || core.currentProgram.rampMode == 'sunrise' || core.currentProgram.rampMode == 'sunset');
+                return core.currentProgram.intervalMode == 'auto' && core.currentProgram.rampMode == 'auto';
             }
         }, {
             name: valueDisplay("Frames", core.currentProgram, 'frames'),
@@ -1843,7 +1736,7 @@ if (VIEW_HARDWARE) {
             action: trackingTiltMotorMenu,
             help: help.trackingTiltMotor,
             condition: function() {
-                return core.motionStatus.available && mcu.validCoordinates() && core.currentProgram.tracking && core.currentProgram.tracking != 'none' && core.currentProgram.tracking != '15deg';
+                return core.motionStatus.available && mcu.validCoordinates() && core.currentProgram.tracking && core.currentProgram.tracking != 'none';
             }
         }, {
             name: valueDisplay("Destination", core.currentProgram, 'destination'),
@@ -1878,14 +1771,14 @@ if (VIEW_HARDWARE) {
             action: hdrCountOptions,
             help: help.interval,
             condition: function() {
-                return (core.currentProgram.rampMode == 'auto' || core.currentProgram.rampMode == 'sunrise' || core.currentProgram.rampMode == 'sunset');
+                return core.currentProgram.rampMode == 'auto';
             }
         }, {
             name: valueDisplay("HDR Bracket Step", core.currentProgram, 'hdrStops'),
             action: hdrStopsOptions,
             help: help.interval,
             condition: function() {
-                return (core.currentProgram.rampMode == 'auto' || core.currentProgram.rampMode == 'sunrise' || core.currentProgram.rampMode == 'sunset') && core.currentProgram.hdrCount > 1;
+                return core.currentProgram.rampMode == 'auto' && core.currentProgram.hdrCount > 1;
             }
         }, {
              name: "Review Program",
@@ -2158,25 +2051,25 @@ if (VIEW_HARDWARE) {
                 power.activity();
                 if (b == 1) {
                     exiting = true;
-                    oled.unblock();
+                    //TODO: oled.unblock();
                     liveviewOn = false;
                     core.lvOff();
                     blockInputs = false;
                     console.log("(capture) disabling handlers...");
-                    inputs.removeListener('B', captureButtonHandler);
-                    inputs.removeListener('D', captureDialHandler);
+                    //TODO: removeListener('B', captureButtonHandler);
+                    //TODO: inputs.removeListener('D', captureDialHandler);
                     setTimeout(cb, 500);
                 } else if (b == 4) {
                     liveviewOn = false;
                     core.capture(null, function(err) {
                         if(err) {
                             exiting = true;
-                            oled.unblock();
+                            //TODO: oled.unblock();
                             liveviewOn = false;
                             blockInputs = false;
                             console.log("(capture) error, disabling handlers...");
-                            inputs.removeListener('B', captureButtonHandler);
-                            inputs.removeListener('D', captureDialHandler);
+                            //TODO: inputs.removeListener('B', captureButtonHandler);
+                            //TODO: inputs.removeListener('D', captureDialHandler);
                             setTimeout(function(){
                                 cb();
                             }, 500);
@@ -2214,16 +2107,16 @@ if (VIEW_HARDWARE) {
                 }
             }
 
-            oled.block();
+            //TODO: oled.block();
             liveviewOn = true;
-            inputs.on('B', captureButtonHandler);
+            //TODO: inputs.on('B', captureButtonHandler);
             console.log("(capture) started liveview, getting settings...");
             core.getSettings(function() {
                 console.log("(capture) done getting settings, enabling knob");
                 stats = lists.evStats(core.cameraSettings);
                 ev = stats.ev;
                 if(exiting) return;
-                inputs.on('D', captureDialHandler);
+                //TODO: inputs.on('D', captureDialHandler);
             });
             core.preview();
         }
@@ -2730,20 +2623,21 @@ if (VIEW_HARDWARE) {
             name: "Gesture Sensor",
             value: "enabled",
             help: help.gestureEnableMenu,
-            action: ui.set(inputs, 'gestureStatus', 'enabled', function(cb){
-                db.set('gestureSensor', "yes");
-                inputs.startGesture();
-                cb && cb();
-            })
+            // action: 
+            //     ui.set(inputs, 'gestureStatus', 'enabled', function(cb){
+            //     db.set('gestureSensor', "yes");
+            //     //TODO: inputs.startGesture();
+            //     cb && cb();
+            // })
         }, {
             name: "Gesture Sensor",
             value: "disabled",
             help: help.gestureEnableMenu,
-            action: ui.set(inputs, 'gestureStatus', 'disabled', function(cb){
-                db.set('gestureSensor', "no");
-                inputs.stopGesture();
-                cb && cb();
-            })
+            // action: ui.set(inputs, 'gestureStatus', 'disabled', function(cb){
+            //     db.set('gestureSensor', "no");
+            //     //TODO: inputs.stopGesture();
+            //     cb && cb();
+            // })
         }]
     }
 
@@ -2754,18 +2648,18 @@ if (VIEW_HARDWARE) {
             name: "Developer Mode",
             value: "disabled",
             help: help.developerModeMenu,
-            action: ui.set(updates, 'developerMode', false, function(cb){
-                db.set('developerMode', "no");
-                cb && cb();
-            })
+            // action: ui.set(updates, 'developerMode', false, function(cb){
+            //     db.set('developerMode', "no");
+            //     cb && cb();
+            // })
         }, {
             name: "Developer Mode",
             value: "enabled",
             help: help.developerModeMenu,
-            action: ui.set(updates, 'developerMode', true, function(cb){
-                db.set('developerMode', "yes");
-                cb && cb();
-            })
+            // action: ui.set(updates, 'developerMode', true, function(cb){
+            //     db.set('developerMode', "yes");
+            //     cb && cb();
+            // })
         }]
     }
 
@@ -2912,29 +2806,29 @@ if (VIEW_HARDWARE) {
             name: "Color Theme",
             value: "VIEW Default",
             help: help.colorThemeMenu,
-            action: ui.set(oled, 'theme', 'VIEW Default', function(cb){
-                db.set('colorTheme', "default");
-                oled.setTheme("default");
-                cb && cb();
-            })
+            // action: ui.set(oled, 'theme', 'VIEW Default', function(cb){
+            //     db.set('colorTheme', "default");
+            //     oled.setTheme("default");
+            //     cb && cb();
+            // })
         }, {
             name: "Color Theme",
             value: "Night Red",
             help: help.colorThemeMenu,
-            action: ui.set(oled, 'theme', 'Night Red', function(cb){
-                db.set('colorTheme', "red");
-                oled.setTheme("red");
-                cb && cb();
-            })
+            // action: ui.set(oled, 'theme', 'Night Red', function(cb){
+            //     db.set('colorTheme', "red");
+            //     oled.setTheme("red");
+            //     cb && cb();
+            // })
         }, {
             name: "Color Theme",
             value: "High Contrast",
             help: help.colorThemeMenu,
-            action: ui.set(oled, 'theme', 'High Contrast', function(cb){
-                db.set('colorTheme', "hc");
-                oled.setTheme("hc");
-                cb && cb();
-            })
+            // action: ui.set(oled, 'theme', 'High Contrast', function(cb){
+            //     db.set('colorTheme', "hc");
+            //     oled.setTheme("hc");
+            //     cb && cb();
+            // })
         }]
     }
 
@@ -3010,7 +2904,7 @@ if (VIEW_HARDWARE) {
             action: chargeIndicatorMenu,
             help: help.chargeIndicatorMenu
         },{
-            name: valueDisplay("Gesture Sense", inputs, 'gestureStatus'),
+            // name: valueDisplay("Gesture Sense", inputs, 'gestureStatus'),
             action: gestureEnableMenu,
             help: help.gestureEnableMenu
         },{
@@ -3020,24 +2914,26 @@ if (VIEW_HARDWARE) {
                 ui.back();
                 gestureString = "Calibrating gesture sensor.\nKeep area in front of sensor clear during calibration.\n";
                 ui.alert('Calibrating...', function(){return gestureString;});
-                inputs.calibrateGesture(function(err, status, done) {
-                    gestureString = "Calibrating gesture sensor.\nKeep area in front of sensor clear during calibration.\n";
-                    gestureString += status + "\n";
-                    if(done) {
-                        gestureString = "Calibration Complete!\nMove your hand in front to test the sensor.\n";
-                        ui.back();
-                        ui.alert('Gesture Test', function(){return gestureString;}, 200);
-                    } else {
+                //TODO: 
+                // inputs.calibrateGesture(function(err, status, done) {
+                //     gestureString = "Calibrating gesture sensor.\nKeep area in front of sensor clear during calibration.\n";
+                //     gestureString += status + "\n";
+                //     if(done) {
+                //         gestureString = "Calibration Complete!\nMove your hand in front to test the sensor.\n";
+                //         ui.back();
+                //         ui.alert('Gesture Test', function(){return gestureString;}, 200);
+                //     } else {
 
-                    }
-                });
+                //     }
+                // });
             },
             condition: function(){
-                return inputs.gestureStatus == 'enabled';
+                return false;
+                //TODO:return inputs.gestureStatus == 'enabled';
             },
             help: help.gestureEnableMenu
         },{
-            name: valueDisplay("Theme", oled, 'theme'),
+            //TODO: name: valueDisplay("Theme", oled, 'theme'),
             action: colorThemeMenu,
             help: help.colorThemeMenu
         },{
@@ -3120,30 +3016,30 @@ if (VIEW_HARDWARE) {
         var info = "";
         var coords = mcu.validCoordinates();
         if(coords) {
-            var sunmoon = meeus.sunmoon(new Date(), coords.lat, coords.lon, coords.alt);
+            var suntimes = suncalc.getTimes(new Date(), coords.lat, coords.lon, true);
+            var moontimes = suncalc.getMoonTimes(new Date(), coords.lat, coords.lon, true);
+            var mooninfo = suncalc.getMoonIllumination(new Date(), true);
             var now = moment();
-            var sunrise = moment(sunmoon.suntimes.rise);
-            var sunset = moment(sunmoon.suntimes.set);
-            var moonrise = moment(sunmoon.moontimes.rise);
-            var moonset = moment(sunmoon.moontimes.set);
-
+            var sunrise = moment(suntimes.sunrise);
+            var sunset = moment(suntimes.sunset);
+            var moonrise = moment(moontimes.rise);
+            var moonset = moment(moontimes.set);
             info += "Current Time: " + now.format("h:mm:ss A") + "\t";
             info += "Sun sets at " + sunset.format("h:mm:ss A") + "\t   (" + sunset.fromNow() + ")\t";
             info += "Sun rises at " + sunrise.format("h:mm:ss A") + "\t   (" + sunrise.fromNow() + ")\t";
             info += "Moon rises at " + moonrise.format("h:mm:ss A") + "\t   (" + moonrise.fromNow() + ")\t";
             info += "Moon sets at " + moonset.format("h:mm:ss A") + "\t   (" + moonset.fromNow() + ")\t";
             var phase = "unknown";
-            var phaseNumber = (sunmoon.mooninfo.phase * 180 / Math.PI) / 180 + 0.5
-            if(phaseNumber == 0 || phaseNumber == 1) phase = "New Moon"; 
-            else if(phaseNumber < 0.25) phase = "Waxing Crescent"; 
-            else if(phaseNumber == 0.25) phase = "First Quarter";
-            else if(phaseNumber > 0.25 && phaseNumber < 0.5) phase = "Waxing Gibbous";
-            else if(phaseNumber == 0.5) phase = "Full Moon";
-            else if(phaseNumber > 0.5 && phaseNumber < 0.75) phase = "Waning Gibbous";
-            else if(phaseNumber == 0.75) phase = "Last Quarter";
-            else if(phaseNumber > 0.75) phase = "Waning Crescent";
+            if(mooninfo.phase == 0 || mooninfo.phase == 1) phase = "New Moon"; 
+            else if(mooninfo.phase < 0.25) phase = "Waxing Crescent"; 
+            else if(mooninfo.phase == 0.25) phase = "First Quarter";
+            else if(mooninfo.phase > 0.25 && mooninfo.phase < 0.5) phase = "Waxing Gibbous";
+            else if(mooninfo.phase == 0.5) phase = "Full Moon";
+            else if(mooninfo.phase > 0.5 && mooninfo.phase < 0.75) phase = "Waning Gibbous";
+            else if(mooninfo.phase == 0.75) phase = "Last Quarter";
+            else if(mooninfo.phase > 0.75) phase = "Waning Crescent";
             info += "Phase: " + phase + "\t";
-            info += "Moon illumination: " + Math.round(sunmoon.mooninfo.illumination * 100) + "%\t";
+            info += "Moon illumination: " + Math.round(mooninfo.fraction * 100) + "%\t";
         } else {
            info = "GPS position info unavailable\t";
         }
@@ -3425,68 +3321,71 @@ if (VIEW_HARDWARE) {
         } ]
     }
 
-    ui.init(oled);
+    ui.init(null);
     ui.load(mainMenu);
 
-    inputs.on('D', function(move) {
-        power.activity();
-        if(oled.videoRunning) return;
+    //TODO:
+    // inputs.on('D', function(move) {
+    //     power.activity();
+    //     if(oled.videoRunning) return;
 
-        blockGestureTimer();
-        if (blockInputs) return;
+    //     blockGestureTimer();
+    //     if (blockInputs) return;
 
-        if (move == "U") {
-            ui.up();
-        }
-        if (move == "D") {
-            ui.down();
-        }
-        if (move == "U+") {
-            ui.up(true);
-        }
-        if (move == "D+") {
-            ui.down(true);
-        }
-    });
+    //     if (move == "U") {
+    //         ui.up();
+    //     }
+    //     if (move == "D") {
+    //         ui.down();
+    //     }
+    //     if (move == "U+") {
+    //         ui.up(true);
+    //     }
+    //     if (move == "D+") {
+    //         ui.down(true);
+    //     }
+    // });
 
-    inputs.on('B', function(move) {
-        power.activity();
-        if(oled.videoRunning) {
-            oled.stopVideo();
-            return;
-        }
-        blockGestureTimer();
-        if (blockInputs) return;
+    //TODO:
+    // inputs.on('B', function(move) {
+    //     power.activity();
+    //     if(oled.videoRunning) {
+    //         oled.stopVideo();
+    //         return;
+    //     }
+    //     blockGestureTimer();
+    //     if (blockInputs) return;
 
-        if (move == "1") {
-            ui.backButton();
-        }
-        if (move == "2") {
-            ui.enter();
-        }
-        if (move == "3") {
-            ui.button3();
-        }
-        if (move == "4") {
-            ui.enter(true);
-        }
+    //     if (move == "1") {
+    //         ui.backButton();
+    //     }
+    //     if (move == "2") {
+    //         ui.enter();
+    //     }
+    //     if (move == "3") {
+    //         ui.button3();
+    //     }
+    //     if (move == "4") {
+    //         ui.enter(true);
+    //     }
 
-        if (move == "5") {
-            ui.help();
-        }
+    //     if (move == "5") {
+    //         ui.help();
+    //     }
 
-        if (move == 6) {
-            ui.load(powerConfirm, null, null, true);
-        }
-    });
+    //     if (move == 6) {
+    //         ui.load(powerConfirm, null, null, true);
+    //     }
+    // });
 
     var confirmSaveXMPs = function(clip) {
         ui.confirmationPrompt("Save new XMPs to SD?", "write to SD", "cancel", help.saveXMPs, function(cb){
-            oled.value([{
-                name: "Writing to card",
-                value: "please wait"
-            }]);
-            oled.update();
+            //TODO:
+            // oled.value([{
+            //     name: "Writing to card",
+            //     value: "please wait"
+            // }]);
+            // oled.update();
             if(clip) {
                 clips.saveXMPsToCard(clip.index, function(err) {
                     ui.back();
@@ -3670,61 +3569,61 @@ if (VIEW_HARDWARE) {
     }
 
 
-    inputs.on('G', function(move) {
-        console.log("Gesture: " + move);
-        gestureString += move;
-        if(gestureString.length > 500) gestureString = "";
-        power.activity();
-        if (blockInputs) return;
-        if(!core.intervalometerStatus.running) return; // only use gesture sensor when a time-lapse is running
-        if (blockGesture) {
-            console.log("(blocked)");
-            return;
-        }
-        gestureModeTimer();
-        if (!oled.visible) {
-            oled.show();
-            return;
-        }
+    // inputs.on('G', function(move) {
+    //     console.log("Gesture: " + move);
+    //     gestureString += move;
+    //     if(gestureString.length > 500) gestureString = "";
+    //     power.activity();
+    //     if (blockInputs) return;
+    //     if(!core.intervalometerStatus.running) return; // only use gesture sensor when a time-lapse is running
+    //     if (blockGesture) {
+    //         console.log("(blocked)");
+    //         return;
+    //     }
+    //     gestureModeTimer();
+    //     if (!oled.visible) {
+    //         oled.show();
+    //         return;
+    //     }
 
-        if (move == "U") {
-            //ui.up();
-        }
-        if (move == "D") {
-            //ui.down();
-        }
-        if (move == "L") {
-            if(gestureVideoPlaying) {
-                gestureVideoPlaying = false;
-                oled.stopVideo();
-                gestureModeTimer();
-            } else {
-                gestureMode = false;
-                oled.hide();
-            }
-        }
-        if (move == "R") {
-            if (!oled.visible) {
-                oled.show();
-            } else if(gestureVideoPlaying) {
-                oled.videoSkipFrames(30*10);
-            } else {
-                console.log("running preview via gesture...");
-                gestureVideoPlaying = true;
-                core.getCurrentTimelapseFrames(null, function(err, framesPaths) {
-                    if(framesPaths) {
-                        oled.video(null, framesPaths, 30, function() {
-                            gestureVideoPlaying = false;
-                            gestureModeTimer();
-                        });
-                    } else {
-                        gestureVideoPlaying = false;
-                        gestureModeTimer();
-                    }                            
-                }) 
-            }
-        }
-    });
+    //     if (move == "U") {
+    //         //ui.up();
+    //     }
+    //     if (move == "D") {
+    //         //ui.down();
+    //     }
+    //     if (move == "L") {
+    //         if(gestureVideoPlaying) {
+    //             gestureVideoPlaying = false;
+    //             oled.stopVideo();
+    //             gestureModeTimer();
+    //         } else {
+    //             gestureMode = false;
+    //             oled.hide();
+    //         }
+    //     }
+    //     if (move == "R") {
+    //         if (!oled.visible) {
+    //             oled.show();
+    //         } else if(gestureVideoPlaying) {
+    //             oled.videoSkipFrames(30*10);
+    //         } else {
+    //             console.log("running preview via gesture...");
+    //             gestureVideoPlaying = true;
+    //             core.getCurrentTimelapseFrames(null, function(err, framesPaths) {
+    //                 if(framesPaths) {
+    //                     oled.video(null, framesPaths, 30, function() {
+    //                         gestureVideoPlaying = false;
+    //                         gestureModeTimer();
+    //                     });
+    //                 } else {
+    //                     gestureVideoPlaying = false;
+    //                     gestureModeTimer();
+    //                 }                            
+    //             }) 
+    //         }
+    //     }
+    // });
 
 }
 
@@ -3735,7 +3634,7 @@ function closeSystem(callback) {
     app.close();
     if (VIEW_HARDWARE) {
         console.log("closing inputs...");
-        inputs.stop();
+        //TODO:inputs.stop();
     }
     try {
         db.set('intervalometer.currentProgram', core.currentProgram);
@@ -3753,7 +3652,7 @@ function closeSystem(callback) {
         console.log("db closed.");
         cbDone = true;
         if (VIEW_HARDWARE) {
-            oled.close();
+            //TODO:oled.close();
             //callback && callback();
         } else {
             //callback && callback();
@@ -3782,13 +3681,14 @@ nodeCleanup(function (exitCode, signal) {
         console.log("Shutting down normally, assuming closeSystem is already called.");
         return;
     }
-    if(updates.updatingKernel) {
-        console.log("Kernel update in progress, delaying shutdown by 10 seconds...");
-        setTimeout(function() {
-            process.exit();
-        }, 10000);
-        return;
-    }
+    //TODO:
+    // if(updates.updatingKernel) {
+    //     console.log("Kernel update in progress, delaying shutdown by 10 seconds...");
+    //     setTimeout(function() {
+    //         process.exit();
+    //     }, 10000);
+    //     return;
+    // }
     if(systemClosed) {
         nodeCleanup.uninstall(); // don't call cleanup handler again
         console.log("Shutting down, second attempt, sending SIGKILL");
@@ -3810,7 +3710,7 @@ nodeCleanup(function (exitCode, signal) {
 
 db.get('intervalometer.currentProgram', function(err, data) {
     if(!err && data) {
-        console.log("Loading saved intervalometer settings...", data);
+        //console.log("Loading saved intervalometer settings...", data);
         core.loadProgram(data);
     }
 });
@@ -3862,28 +3762,28 @@ db.get('buttonMode', function(err, mode) {
 db.get('gestureSensor', function(err, en) {
     if(en != "no") {
         setTimeout(function(){
-            inputs.startGesture();
+           //TODO:  inputs.startGesture();
         }, 60000);
     } else {
-        inputs.stopGesture();
+        //TODO: inputs.stopGesture();
     }
 });
 
 db.get('colorTheme', function(err, theme) {
     if(!err && theme) {
-        oled.setTheme(theme);
+       //TODO: oled.setTheme(theme);
     }
 });
 
 db.get('audioAlerts', function(err, audio) {
     if(!err && audio) {
-        ui.audio = audio;
+        //TODO:ui.audio = audio;
     }
 });
 
 db.get('developerMode', function(err, en) {
     if(!err) {
-        updates.developerMode = (en == "yes");
+        //TODO:updates.developerMode = (en == "yes");
     }
 });
 
@@ -3917,11 +3817,11 @@ mcu.on('timezone', function(tz) {
 });
 
 mcu.on('gps', function(index) {
-    oled.setIcon('gps', index == 2);
-    ui.reload();
+    //TODO:oled.setIcon('gps', index == 2);
+    //TODO:ui.reload();
 });
 
-light.start();
+//TODO: light.start();
 
 core.watchdogEnable();
 
@@ -4084,7 +3984,7 @@ app.on('message', function(msg) {
                             var fragment = 0;
                             var sendFragment = function(start){
                                 console.log("sending time-lapse fragment " + fragment + " of " + fragments);
-                                clips.getTimelapseImagesFromPaths(framesPaths.slice(fragment * 100, fragment * 100 + 100), true, function(err, images) {
+                                clips.getTimelapseImagesFromPaths(framesPaths.slice(fragment * 100, fragment * 100 + 100), function(err, images) {
                                     if(!err && images) {
                                         msg.reply('timelapse-images', {
                                             index: 'current',
@@ -4128,7 +4028,7 @@ app.on('message', function(msg) {
 
                         var sendFragment = function(){
                             console.log("sending time-lapse fragment " + fragment + " of " + fragments);
-                            clips.getTimelapseImagesHq(msg.index, fragment * 100, 100, function(err, images) {
+                            clips.getTimelapseImages(msg.index, fragment * 100, 100, function(err, images) {
                                 if(!err && images) {
                                     msg.reply('timelapse-images', {
                                         index: msg.index,
@@ -4209,7 +4109,7 @@ app.on('message', function(msg) {
                 break;
 
             case 'dismiss-error':
-                ui.dismissAlert();
+                //TODO:ui.dismissAlert();
                 break;
 
             case 'setEv':
@@ -4303,7 +4203,7 @@ core.on('camera.photo', function() {
                     if (!err && jpgBuf) {
                         image.saveTemp("oledthm" + thmIndex, jpgBuf, function(err, path) {
                             if(thmIndex == "1") thmIndex = "2"; else thmIndex = "1"; // alternate to avoid reading partial file
-                            oled.updateThumbnailPreview(path);
+                            //TODO:oled.updateThumbnailPreview(path);
                         });
                     }
                 });
@@ -4318,8 +4218,8 @@ core.on('camera.photo', function() {
                 image.downsizeJpeg(new Buffer(core.photo.jpeg), size, null, function(err, jpgBuf) {
                     if (!err && jpgBuf) {
                         image.saveTemp("oledthm", jpgBuf, function(err, path) {
-                            oled.jpeg(path, 0, 15, true);
-                            oled.update(true);
+                            //TODO:oled.jpeg(path, 0, 15, true);
+                            //TODO:oled.update(true);
                         });
                     }
                 });
@@ -4346,15 +4246,15 @@ core.on('camera.photo', function() {
 });
 
 core.on('camera.histogram', function(histogram) {
-    oled.updateHistogram(histogram);
+    //TODO:oled.updateHistogram(histogram);
     app.send('histogram', {
         histogram: histogram
     });
 });
 
 app.on('connected', function(connected) {
-    oled.setIcon('web', connected);
-    ui.reload();
+    //TODO:oled.setIcon('web', connected);
+    //TODO:ui.reload();
 });
 
 core.on('camera.settings', function() {
@@ -4372,37 +4272,37 @@ core.on('camera.connected', function() {
             btBlockedForSony = true;
         }
     }
-    oled.setIcon('camera', true);
+    //TODO:oled.setIcon('camera', true);
     setTimeout(function() {
         app.send('camera', {
             connected: true,
             model: core.cameraModel
         });
         if (VIEW_HARDWARE) {
-            ui.status(core.cameraModel);
-            ui.reload();
+            //TODO:ui.status(core.cameraModel);
+            //TODO:ui.reload();
         }
     }, 1000);
 });
 
-var defaultStatus = "VIEW " + updates.getCurrentVersion();
-ui.defaultStatus(defaultStatus);
-ui.status(defaultStatus);
+var defaultStatus = "VIEW " + "1.0.0"; //TODO: updates.getCurrentVersion();
+//TODO:ui.defaultStatus(defaultStatus);
+//TODO:ui.status(defaultStatus);
 console.log("Setting default status to '" + defaultStatus + "'")
 
 core.on('camera.exiting', function() {    
     if(btBlockedForSony) {
         wifi.unblockBt();
     }
-    oled.setIcon('camera', false);
+    //TODO:oled.setIcon('camera', false);
     app.send('camera', {
         connected: false,
         model: ''
     });
     if (VIEW_HARDWARE) {
-        ui.defaultStatus(defaultStatus);
-        ui.status("camera disconnected");
-        ui.reload();
+        //TODO:ui.defaultStatus(defaultStatus);
+        //TODO:ui.status("camera disconnected");
+        //TODO:ui.reload();
     }
 });
 
@@ -4416,14 +4316,17 @@ core.on('camera.status', function(msg) {
     app.send('status', {
         status: msg
     });
-    if (!blockInputs && VIEW_HARDWARE) {
-        ui.status(msg);
-        if (core.cameraConnected) {
-            ui.defaultStatus(core.cameraModel);
-        } else {
-            ui.defaultStatus(defaultStatus);
-        }
-    }
+
+    //TODO:
+     //if (!blockInputs && VIEW_HARDWARE) {
+             
+        //     ui.status(msg);
+        //     if (core.cameraConnected) {
+        //          ui.defaultStatus(core.cameraModel);
+        //      } else {
+        //          ui.defaultStatus(defaultStatus);
+        //      }
+     //}
 });
 
 core.on('intervalometer.status', function(msg) {
@@ -4450,7 +4353,7 @@ core.on('intervalometer.status', function(msg) {
         intervalSeconds: msg.intervalMs / 1000,
         bufferSeconds: msg.autoSettings ? msg.autoSettings.paddingTimeMs / 1000 : 5,
         rampModeText: core.currentProgram.rampMode,
-        intervalModeText: (core.currentProgram.rampMode == 'auto' || core.currentProgram.rampMode == 'sunrise' || core.currentProgram.rampMode == 'sunset') ? core.currentProgram.intervalMode : 'fixed',
+        intervalModeText: core.currentProgram.rampMode == 'auto' ? core.currentProgram.intervalMode : 'fixed',
         frames: msg.frames,
         remaining: msg.framesRemaining,
         shutterSeconds: msg.cameraSettings.details.shutter ? lists.getSecondsFromEv(msg.cameraSettings.details.shutter.ev) : 0,
@@ -4459,18 +4362,19 @@ core.on('intervalometer.status', function(msg) {
         running: msg.running
     }
     console.log("statusScreen", statusScreen);
-    oled.updateTimelapseStatus(statusScreen);
-    ui.reload();
-    if (msg.message != "running" && !blockInputs && VIEW_HARDWARE) {
-        ui.status(msg.message);
-    }
+    //TODO:oled.updateTimelapseStatus(statusScreen);
+    //TODO:ui.reload();
+    // if (msg.message != "running" && !blockInputs && VIEW_HARDWARE) {
+    //     ui.status(msg.message);
+    // }
 });
 
 core.on('camera.connectionError', function(msg) {
-    if(ui.currentOrigin() == 'alert') {
-        ui.back();
-    }
-    ui.alert('ERROR', msg, null, true);
+    //TODO:
+    // if(ui.currentOrigin() == 'alert') {
+    //     ui.back();
+    // }
+    // ui.alert('ERROR', msg, null, true);
     app.send('connectionError', {
         msg: msg
     });
@@ -4478,10 +4382,11 @@ core.on('camera.connectionError', function(msg) {
 });
 
 core.on('intervalometer.error', function(msg) {
-    if(ui.currentOrigin() == 'alert') {
-        ui.back();
-    }
-    ui.alert('ERROR', msg, null, true);
+    //TODO:
+    // if(ui.currentOrigin() == 'alert') {
+    //     ui.back();
+    // }
+    // ui.alert('ERROR', msg, null, true);
     app.send('intervalometerError', {
         msg: msg
     });
@@ -4492,18 +4397,17 @@ core.on('motion.status', function(status) {
     console.log("motion.status", status)
     app.send('motion', status);
     if (status.available) {
-        oled.setIcon('bt', true);
+        //TODO:oled.setIcon('bt', true);
         //stopScan();
-        ui.reload();
+        //TODO:ui.reload();
     } else {
-        oled.setIcon('bt', false);
-        ui.reload();
+        //TODO:oled.setIcon('bt', false);
+        //TODO:ui.reload();
         if(status.reload) {
-            console.log("motion disconnected, reloading BT")
+            connected.log("motion disconnected, reloading BT")
             wifi.resetBt(function(){
                 //startScan();
             });
         }
     }
 });
-

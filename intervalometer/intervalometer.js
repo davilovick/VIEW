@@ -3,39 +3,39 @@ var exec = require('child_process').exec;
 require('rootpath')();
 var camera = require('camera/camera.js');
 var db = require('system/db.js');
-var motion = require('motion/motion.js');
+//TODO: var motion = require('motion/motion.js');
 var image = require('camera/image/image.js');
 var exp = require('intervalometer/exposure.js');
 var interpolate = require('intervalometer/interpolate.js');
 var fs = require('fs');
 var async = require('async');
-var TLROOT = "/root/time-lapse";
-var Button = require('gpio-button');
-var gpio = require('linux-gpio');
+var TLROOT = "/home/davilovick/Videos";
+//TODO: var Button = require('gpio-button');
+//TODO: var gpio = require('linux-gpio');
 var _ = require('underscore');
-//var suncalc = require('suncalc');
-var meeus = require('meeusjs');
+// var suncalc = require('suncalc');
 var eclipse = require('intervalometer/eclipse.js');
 
 var AUXTIP_OUT = 111;
 var AUXRING_OUT = 110;
 var HOTSHOE_IN = 34;
 
-gpio.setMode(gpio.MODE_RAW);
+//TODO: 
+// gpio.setMode(gpio.MODE_RAW);
 
-gpio.setup(AUXTIP_OUT, gpio.DIR_OUT, function(err){
-    if(err) console.log("GPIO error: ", err);
-    gpio.write(AUXTIP_OUT, 1);
-});
+// gpio.setup(AUXTIP_OUT, gpio.DIR_OUT, function(err){
+//     if(err) console.log("GPIO error: ", err);
+//     gpio.write(AUXTIP_OUT, 1);
+// });
 
-gpio.setup(AUXRING_OUT, gpio.DIR_OUT, function(err){
-    if(err) console.log("GPIO error: ", err);
-    gpio.write(AUXRING_OUT, 1);
-});
+// gpio.setup(AUXRING_OUT, gpio.DIR_OUT, function(err){
+//     if(err) console.log("GPIO error: ", err);
+//     gpio.write(AUXRING_OUT, 1);
+// });
 
-gpio.setup(HOTSHOE_IN, gpio.DIR_IN, function(err){
-    if(err) console.log("GPIO error: ", err);
-});
+// gpio.setup(HOTSHOE_IN, gpio.DIR_IN, function(err){
+//     if(err) console.log("GPIO error: ", err);
+// });
 
 var intervalometer = new EventEmitter();
 
@@ -67,35 +67,37 @@ status = {
 }
 intervalometer.status = status;
 
-var auxTrigger = new Button('input-aux2');
+//TODO: 
+// var auxTrigger = new Button('input-aux2');
 
-auxTrigger.on('press', function() {
-    console.log("AUX2 trigger!");
-    if (status.running && intervalometer.currentProgram.intervalMode == 'aux') timerHandle = setTimeout(runPhoto, 0);
-});
+// auxTrigger.on('press', function() {
+//     console.log("AUX2 trigger!");
+//     if (status.running && intervalometer.currentProgram.intervalMode == 'aux') timerHandle = setTimeout(runPhoto, 0);
+// });
 
-auxTrigger.on('error', function(err) {
-    console.log("AUX2 error: ", err);
-});
+// auxTrigger.on('error', function(err) {
+//     console.log("AUX2 error: ", err);
+// });
 
-function motionSyncPulse() {
-    if (status.running && intervalometer.currentProgram.intervalMode != 'aux') {
-        gpio.read(HOTSHOE_IN, function(err, shutterClosed) {
-            console.log("hotshoe:", shutterClosed);
-            if(shutterClosed) {
-                console.log("=> AUX Pulse");
-                gpio.write(AUXTIP_OUT, 0, function() {
-                    setTimeout(function(){
-                        gpio.write(AUXTIP_OUT, 1);
-                    }, 200);
-                });
-            } else {
-                setTimeout(motionSyncPulse, 100);
-            }
-        });
+//TODO: 
+// function motionSyncPulse() {
+//     if (status.running && intervalometer.currentProgram.intervalMode != 'aux') {
+//         gpio.read(HOTSHOE_IN, function(err, shutterClosed) {
+//             console.log("hotshoe:", shutterClosed);
+//             if(shutterClosed) {
+//                 console.log("=> AUX Pulse");
+//                 gpio.write(AUXTIP_OUT, 0, function() {
+//                     setTimeout(function(){
+//                         gpio.write(AUXTIP_OUT, 1);
+//                     }, 200);
+//                 });
+//             } else {
+//                 setTimeout(motionSyncPulse, 100);
+//             }
+//         });
 
-    } 
-}
+//     } 
+// }
 
 function fileInit() {
     fs.writeFileSync(status.timelapseFolder + "/details.csv", "frame, error, target, setting, rate, interval, timestamp, file, p, i, d\n");
@@ -124,20 +126,9 @@ function getDetails(file) {
     if(intervalometer.gpsData) {
         d.latitude = intervalometer.gpsData.lat;
         d.longitude = intervalometer.gpsData.lon;
-
-        var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
-        var sunpos = {
-            azimuth: sunmoon.sunpos.az,
-            altitude: sunmoon.sunpos.alt,
-        }
-        var moonpos = {
-            azimuth: sunmoon.moonpos.az,
-            altitude: sunmoon.moonpos.alt,
-        }
-
-        d.sunPos = sunpos;
-        d.moonPos = moonpos;
-        d.moonIllumination = sunmoon.mooninfo.illumination;
+        d.sunPos = suncalc.getPosition(new Date(), d.latitude, d.longitude);
+        d.moonPos = suncalc.getMoonPosition(new Date(), d.latitude, d.longitude);
+        d.moonIllumination = suncalc.getMoonIllumination(new Date());
     }
     return d;
 }
@@ -196,7 +187,7 @@ function doKeyframeAxis(axisName, axisSubIndex, setupFirst, interpolationMethod,
                 }
             });
             kfSet = interpolate[interpolationMethod](kfPoints, secondsSinceStart);
-            console.log("KF: " + axisName + (axisSubIndex != null ? axisSubIndex : '') + " target: " + kfSet);
+            console.log("KF: " + axisName + " target: " + kfSet);
         }
         var axisNameExtension = '';
         if(axisSubIndex != null) axisNameExtension = '-' + axisSubIndex;
@@ -224,18 +215,9 @@ function doKeyframeAxis(axisName, axisSubIndex, setupFirst, interpolationMethod,
 function calculateCelestialDistance(startPos, currentPos) {
     var panDiff = (currentPos.azimuth - startPos.azimuth) * 180 / Math.PI;
     var tiltDiff = (currentPos.altitude - startPos.altitude) * 180 / Math.PI;
-    var altDeg = currentPos.altitude * 180 / Math.PI;
-    var ease = 1;
-    if(altDeg < 5) {
-        if(altDeg < -10) {
-            ease = 0;
-        } else {
-            ease = (altDeg - -10) / 15;
-        }
-    }
     return {
-        pan: panDiff * ease,
-        tilt: tiltDiff * ease
+        pan: panDiff,
+        tilt: tiltDiff
     }
 }
 
@@ -276,24 +258,11 @@ function processKeyframes(setupFirst, callback) {
     if((intervalometer.currentProgram.keyframes == null || intervalometer.currentProgram.keyframes.length == 1) && intervalometer.currentProgram.tracking != 'none' && intervalometer.gpsData) {
         var trackingTarget = null;
         if(intervalometer.currentProgram.tracking == 'sun') {
-            var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
-            var sunPos = {
-                azimuth: sunmoon.sunpos.az,
-                altitude: sunmoon.sunpos.alt,
-            }
+            var sunPos = suncalc.getPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
             trackingTarget = calculateCelestialDistance(status.sunPos, sunPos);
         } else if(intervalometer.currentProgram.tracking == 'moon') {
-            var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
-            var moonPos = {
-                azimuth: sunmoon.moonpos.az,
-                altitude: sunmoon.moonpos.alt,
-            }
+            var moonPos = suncalc.getMoonPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
             trackingTarget = calculateCelestialDistance(status.moonPos, moonPos);
-        } else if(intervalometer.currentProgram.tracking == '15deg') {
-            trackingTarget = {
-                pan: (((new Date() / 1000) - status.startTime) / 3600) * 15,
-                tilt: 0
-            }
         }
         if(trackingTarget) {
             var panDegrees = trackingTarget.pan - status.trackingPan;
@@ -528,7 +497,7 @@ function checkCurrentPlan(restart) {
                 .nightIntervl
             */
             if(plan.mode == 'auto') {
-                status.rampMode = 'auto';
+                status.rampMode = 'fixed';
                 if(status.rampEv == null) status.rampEv = camera.lists.getEvFromSettings(camera.ptp.settings); 
             }
             if(plan.mode == 'lock') {
@@ -614,7 +583,7 @@ function runPhoto() {
         if (intervalometer.currentProgram.rampMode == "fixed") {
             status.intervalMs = intervalometer.currentProgram.interval * 1000;
             if (status.running) timerHandle = setTimeout(runPhoto, status.intervalMs);
-            setTimeout(motionSyncPulse, camera.lists.getSecondsFromEv(camera.ptp.settings.details.shutter.ev) * 1000 + 1500);
+            //TODO: setTimeout(motionSyncPulse, camera.lists.getSecondsFromEv(camera.ptp.settings.details.shutter.ev) * 1000 + 1500);
             captureOptions.calculateEv = false;
             status.lastPhotoTime = new Date() / 1000 - status.startTime;
             camera.ptp.capture(captureOptions, function(err, photoRes) {
@@ -704,7 +673,7 @@ function runPhoto() {
                 return;
             } else {
                 var msDelayPulse = camera.lists.getSecondsFromEv(shutterEv) * 1000 + 1500;
-                setTimeout(motionSyncPulse, msDelayPulse);
+                //TODO: setTimeout(motionSyncPulse, msDelayPulse);
                 status.lastPhotoTime = new Date() / 1000 - status.startTime;
             }
             camera.ptp.capture(captureOptions, function(err, photoRes) {
@@ -728,7 +697,7 @@ function runPhoto() {
                     intervalometer.autoSettings.paddingTimeMs = status.bufferSeconds * 1000 + 250; // add a quarter second for setting exposure
 
                     if(status.rampMode == "auto") {
-                        status.rampEv = exp.calculate(intervalometer.currentProgram.rampAlgorithm, intervalometer.currentProgram.rampMode, status.rampEv, referencePhotoRes.ev, referencePhotoRes.histogram, camera.minEv(camera.ptp.settings, getEvOptions()), camera.maxEv(camera.ptp.settings, getEvOptions()));
+                        status.rampEv = exp.calculate(intervalometer.currentProgram.rampAlgorithm, status.rampEv, referencePhotoRes.ev, referencePhotoRes.histogram, camera.minEv(camera.ptp.settings, getEvOptions()), camera.maxEv(camera.ptp.settings, getEvOptions()));
                         status.rampRate = exp.status.rate;
                     } else if(status.rampMode == "fixed") {
                         status.rampRate = 0;
@@ -900,8 +869,8 @@ intervalometer.run = function(program) {
                 status.message = "starting";
                 status.frames = 0;
                 status.first = program.rampMode == 'fixed' ? false : true; // triggers setup exposure before first capture unless fixed mode
+                status.framesRemaining = (program.intervalMode == "auto" && program.rampMode == "auto") ? Infinity : program.frames;
                 status.rampMode = program.rampMode == 'fixed' ? 'fixed' : 'auto';
-                status.framesRemaining = (program.intervalMode == "auto" && status.rampMode == "auto") ? Infinity : program.frames;
                 status.startTime = new Date() / 1000;
                 status.rampEv = null;
                 status.bufferSeconds = 0;
@@ -927,16 +896,9 @@ intervalometer.run = function(program) {
                 if(intervalometer.gpsData) {
                     status.latitude = intervalometer.gpsData.lat;
                     status.longitude = intervalometer.gpsData.lon;
-        
-                    var sunmoon = meeus.sunmoon(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon, intervalometer.gpsData.alt);
-                    status.sunPos = {
-                        azimuth: sunmoon.sunpos.az,
-                        altitude: sunmoon.sunpos.alt,
-                    }
-                    status.moonPos = {
-                        azimuth: sunmoon.moonpos.az,
-                        altitude: sunmoon.moonpos.alt,
-                    }
+                    
+                    status.sunPos = suncalc.getPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
+                    status.moonPos = suncalc.getMoonPosition(new Date(), intervalometer.gpsData.lat, intervalometer.gpsData.lon);
                     status.trackingTilt = 0;
                     status.trackingPan = 0;
                 }

@@ -1,13 +1,10 @@
-var DCRAW = "/home/view/current/bin/dcraw";
-var UFRAW = "/usr/bin/ufraw-batch";
-var TMPFOLDER = "/tmp/tlp";
+var DCRAW = "dcraw";
+var TMPFOLDER = "/tmp/davilovickTL";
 var execFile = require('child_process').execFile;
 var epeg = require('epeg');
 var sharp = require('sharp');
 var fs = require('fs');
-//var pixelr = require('pixelr');
 var luminance = require('jpeg-lum');
-//var cv = require('opencv');
 var jpegSize = require('jpeg-size');
 
 var log2 = Math.log2 || function(x) {
@@ -116,22 +113,6 @@ exports.writeXMP = function(fileName, exposureCompensation, description, name, l
     fs.writeFileSync(fileName.replace(/\.[0-9a-z]+$/i, '.xmp'), xmpData);
 }
 
-
-exports.convertRawToTiff = function(rawImagePath, tiffOutputPath, exposureCompensation, callback) {
-    console.log("Processing RAW photo...");
-    var ufraw = execFile(UFRAW, ['--out-depth=16', '--out-type=tiff', '--zip', '--exposure=' + exposureCompensation, '--output=' + tiffOutputPath, rawImagePath], function(err, stdout, stderr) {
-        if (err) console.log("(ufraw) error:", err);
-        if (stderr) console.log("(ufraw) stderr:", stderr);
-        if (callback) callback();
-    });
-}
-
-exports.getJpegFromRawBuffer = function(rawImageBuf, crop, callback) {
-    fs.writeFile(TMP_IMAGE_INPUT, new Buffer(rawImageBuf), function() {
-        getJpeg(TMP_IMAGE_INPUT, crop, callback);
-    });
-}
-
 exports.saveTemp = function(name, buf, callback) {
     var file = name ? TMPFOLDER + "/" + name : TMP_IMAGE_INPUT;
     fs.writeFile(file, new Buffer(buf), function(err) {
@@ -147,7 +128,7 @@ exports.downsizeJpeg = function(jpeg, size, crop, callback) {
     //console.log("Resizing photo...");
     if (!size) size = {};
     if (!size.x) x = (size.y > 0) ? size.y * 1.5 : 300;
-    if (!size.y) size.y = size.x / 1.5;
+    if (!size.y) size.y = Math.round(size.x / 1.5);
     if (!size.q) size.q = 70;
 
     if (!jpeg) return;
@@ -172,20 +153,32 @@ exports.downsizeJpeg = function(jpeg, size, crop, callback) {
             if (imgSize) {
                 if (crop.xPercent > 1) crop.xPercent /= 100;
                 if (crop.yPercent > 1) crop.yPercent /= 100;
-                crop.x = imgSize.width * crop.xPercent - size.x / 2;
-                crop.y = imgSize.height * crop.yPercent - size.y / 2;
+                crop.x = Math.round(imgSize.width * crop.xPercent - size.x / 2);
+                crop.y = Math.round(imgSize.height * crop.yPercent - size.y / 2);
                 if (crop.x < 0) crop.x = 0;
                 if (crop.y < 0) crop.y = 0;
                 if (crop.x > imgSize.width - size.x) crop.x = imgSize.width - size.x;
                 if (crop.y > imgSize.height - size.y) crop.y = imgSize.height - size.y;
-                //console.log("cropping to ", crop);
+                //console.log("cropping to ", crop, size);
                 thm = img.crop(crop.x, crop.y, size.x, size.y, size.q).process();
             } else {
                 console.log("failed to read image size; not cropping");
                 thm = img.downsize(size.x, size.y, size.q).process();
             }
-        } else {
-            thm = img.downsize(size.x, size.y, size.q).process();
+        } else {        
+            imgSize = jpegSize(jpegBuf);   
+            if(imgSize)
+            {
+                if(imgSize.width > size.x || imgSize.height > size.y){
+                    thm = img.downsize(size.x, size.y, size.q).process();
+                }
+                else{
+                    thm = jpegBuf;
+                }
+            }
+            else{
+                thm = img.downsize(size.x, size.y, size.q).process();
+            }            
         }
         //console.log("downsizeJpeg: Done.");
     } catch (e) {
@@ -233,8 +226,8 @@ exports.downsizeJpegSharp = function(jpeg, size, crop, exposureCompensation, cal
                 if (!err && metadata) {
                     if (crop.xPercent > 1) crop.xPercent /= 100;
                     if (crop.yPercent > 1) crop.yPercent /= 100;
-                    crop.x = metadata.width * crop.xPercent - size.x / 2;
-                    crop.y = metadata.height * crop.yPercent - size.y / 2;
+                    crop.x = metadata.width * crop.xPercent - size.x / 5;
+                    crop.y = metadata.height * crop.yPercent - size.y / 5;
                     if (crop.x < 0) crop.x = 0;
                     if (crop.y < 0) crop.y = 0;
                     if (crop.x > metadata.width - size.x) crop.x = metadata.width - size.x;
@@ -308,31 +301,6 @@ exports.getJpegBuffer = function(jpegPath, callback) {
     }
 }
 
-exports.histogramArray = function(jpegBuffer, callback) {
-    fs.writeFile(TMP_IMAGE_THUMB, new Buffer(jpegBuffer), function() {
-        luminance.read(TMP_IMAGE_THUMB, function(err, res) {
-            var histArray = null;
-            if(!err && res && res.histogram) histArray = res.histogram; 
-            if (callback) callback(err, histArray);
-        });
-        /*pixelr.read(TMP_IMAGE_THUMB, "jpeg", function(err, data) {
-            if (err) console.log("Error:", err);
-            var result = new Array(256);
-            if (!err) {
-                for (var i = 0; i < data.pixels.length; i += 3) {
-                    pixelIndex = i / 3;
-                    var val = Math.ceil((data.pixels[i + 0] + data.pixels[i + 1] + data.pixels[i + 2]) / 3);
-                    if (val >= 0 && val <= 255) {
-                        if (!result[val]) result[val] = 1;
-                        else result[val] ++;
-                    }
-                }
-            }
-            if (callback) callback(err, result);
-        });*/
-    });
-}
-
 exports.exposureValue = function(jpegBuffer, callback) {
     var highlightProtection = 20;
 
@@ -347,24 +315,6 @@ exports.exposureValue = function(jpegBuffer, callback) {
                 }
             }
             if (callback) callback(err, lum, res.histogram);
-        });
-    });
-}
-
-exports.faceDetection = function(jpegBuffer, callback) {
-    cv.readImage(jpegBuffer, function(err, im) {
-        im.detectObject(cv.FACE_CASCADE, {}, function(err, faces) {
-            if (!err && faces && faces.length > 0) {
-                console.log("detected " + faces.length + " faces");
-                for (var i = 0; i < faces.length; i++) {
-                    var f = faces[i]
-                    im.ellipse(f.x + f.width / 2, f.y + f.height / 2, f.width / 2, f.height / 2);
-                }
-                jpg = im.toBuffer('jpg');
-                if (callback) callback(jpg);
-            } else {
-                if (callback) callback(jpegBuffer);
-            }
         });
     });
 }
