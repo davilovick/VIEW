@@ -150,7 +150,6 @@ function saveThumbnail(jpgBuffer, index, cameraIndex, exposureCompensation) {
         new Buffer(jpgBuffer),
         size,
         null,
-        exposureCompensation,
         function(err, jpgBuf) {
           if (!err && jpgBuf) {
             fs.writeFile(
