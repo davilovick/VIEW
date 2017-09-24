@@ -1,6 +1,6 @@
 var EventEmitter = require("events").EventEmitter;
 var exec = require('child_process').exec;
-var SerialPort = require('serialport');
+//var SerialPort = require('serialport');
 var _ = require('underscore');
 var geoTz = require('geo-tz');
 var GPS = require('gps');
@@ -23,15 +23,15 @@ mcu.customLatitude = null;
 mcu.customLongitude = null;
 
 mcu.init = function(callback) {
-	_connectSerial('/dev/ttyS1', function(err, version) {
-		if(!err && version) {
-			mcu.ready = true;
-			callback && callback(null, version);
-		} else {
-			mcu.ready = false;
-			callback && callback(err);
-		}
-	});
+	// _connectSerial('/dev/ttyS1', function(err, version) {
+	// 	if(!err && version) {
+	// 		mcu.ready = true;
+	// 		callback && callback(null, version);
+	// 	} else {
+	// 		mcu.ready = false;
+	// 		callback && callback(err);
+	// 	}
+	// });
 }
 
 mcu.setTz = function(tz) {
@@ -149,44 +149,44 @@ var _send = function(data, callback) {
 	callback && callback("not connected");
 }
 
-function _connectSerial(path, callback) {
-    var port = new SerialPort(path, {
-        baudrate: 38400,
-        parser: SerialPort.parsers.readline('\r\n')
-    }, function() {
-        console.log('MCU Serial Opened');
+// function _connectSerial(path, callback) {
+//     var port = new SerialPort(path, {
+//         baudrate: 38400,
+//         parser: SerialPort.parsers.readline('\r\n')
+//     }, function() {
+//         console.log('MCU Serial Opened');
         
-        port.on('data', function(data) {
-        	//console.log("MCU Data: ", data);
-        	_parseData(data);
-        });
+//         port.on('data', function(data) {
+//         	//console.log("MCU Data: ", data);
+//         	_parseData(data);
+//         });
 
-        _send = function(data, cb) { 
-        	port.write(data, function(err) {
-	            port.drain(function() {
-	                cb && cb(err);
-	            });
-	        });
-        }
+//         _send = function(data, cb) { 
+//         	port.write(data, function(err) {
+// 	            port.drain(function() {
+// 	                cb && cb(err);
+// 	            });
+// 	        });
+//         }
 
-        _getVersion(function(err, version) {
-        	if(version != MCU_VERSION) {
-        		_programMcu(function(err) {
-			        _getVersion(function(err, version) {
-			        	if(err || version != MCU_VERSION) {
-			        		console.log("failed to activate MCU!");
-			        		callback && callback("unable to connect to MCU");
-			        	} else {
-			        		callback && callback(err, version);
-			        	}
-			        });
-        		});
-        	} else {
-        		callback && callback(err, version);
-        	}
-        });
-    });
-}
+//         _getVersion(function(err, version) {
+//         	if(version != MCU_VERSION) {
+//         		_programMcu(function(err) {
+// 			        _getVersion(function(err, version) {
+// 			        	if(err || version != MCU_VERSION) {
+// 			        		console.log("failed to activate MCU!");
+// 			        		callback && callback("unable to connect to MCU");
+// 			        	} else {
+// 			        		callback && callback(err, version);
+// 			        	}
+// 			        });
+//         		});
+//         	} else {
+//         		callback && callback(err, version);
+//         	}
+//         });
+//     });
+// }
 
 module.exports = mcu;
 
