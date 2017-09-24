@@ -146,7 +146,7 @@ function saveThumbnail(jpgBuffer, index, cameraIndex, exposureCompensation) {
         x: 160,
         q: 80
       };
-      image.downsizeJpegSharp(
+      image.downsizeJpeg(
         new Buffer(jpgBuffer),
         size,
         null,

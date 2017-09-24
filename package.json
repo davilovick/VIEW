@@ -26,7 +26,6 @@
     "node-serialize": "0.0.4",
     "rootpath": "^0.1.2",
     "serialport": "^5.0.0",
-    "sharp": "^0.18.3",
     "speaker": "^0.4.0",
     "sqlite3": "^3.1.11",
     "udev": "^0.4.0",
