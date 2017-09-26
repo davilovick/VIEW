@@ -12,7 +12,7 @@ var async = require('async');
 var filesystem = require('system/filesystem.js');
 
 var TLROOT = filesystem.timelapsePath;
-//TODO: var Button = require('gpio-button');
+var Button = require('gpio-button');
 //TODO: var gpio = require('linux-gpio');
 var _ = require('underscore');
 // var suncalc = require('suncalc');
@@ -69,17 +69,16 @@ status = {
 }
 intervalometer.status = status;
 
-//TODO: 
-// var auxTrigger = new Button('input-aux2');
+var auxTrigger = new Button('input-aux2');
 
-// auxTrigger.on('press', function() {
-//     console.log("AUX2 trigger!");
-//     if (status.running && intervalometer.currentProgram.intervalMode == 'aux') timerHandle = setTimeout(runPhoto, 0);
-// });
+auxTrigger.on('press', function() {
+    console.log("AUX2 trigger!");
+    if (status.running && intervalometer.currentProgram.intervalMode == 'aux') timerHandle = setTimeout(runPhoto, 0);
+});
 
-// auxTrigger.on('error', function(err) {
-//     console.log("AUX2 error: ", err);
-// });
+auxTrigger.on('error', function(err) {
+    console.log("AUX2 error: ", err);
+});
 
 //TODO: 
 // function motionSyncPulse() {
