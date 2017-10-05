@@ -1,6 +1,6 @@
 var exec = require('child_process').exec;
 var pitft = require("pitft");
-var fb = pitft("/dev/fb0", true);
+var fb = pitft("/dev/fb1", true);
 var fs = require('fs');
 var moment = require('moment');
 
@@ -90,17 +90,19 @@ oled.init = function() {
     fb.clear();
 }
 
-var MENU_XOFFSET = 5;
-var MENU_YOFFSET = 35;
-var MENU_LINE_HEIGHT = 25;
-var MENU_FONT_SIZE = 14;
-var MENU_SELECT_FONT_SIZE = 18
-var MENU_TEXT_FONT_SIZE = 12;
-var MENU_STATUS_FONT_SIZE = 8;
-var MENU_STATUS_XOFFSET = 5;
-var MENU_STATUS_YOFFSET = 10;
-var IMAGE_WIDTH = 75;
-var IMAGE_HEIGHT = 40;
+var SCALE = 2;
+
+var MENU_XOFFSET = 5 * SCALE;
+var MENU_YOFFSET = 35 * SCALE;
+var MENU_LINE_HEIGHT = 25 * SCALE;
+var MENU_FONT_SIZE = 14 * SCALE;
+var MENU_SELECT_FONT_SIZE = 18 * SCALE;
+var MENU_TEXT_FONT_SIZE = 12 * SCALE;
+var MENU_STATUS_FONT_SIZE = 8 * SCALE;
+var MENU_STATUS_XOFFSET = 5 * SCALE;
+var MENU_STATUS_YOFFSET = 10 * SCALE;
+var IMAGE_WIDTH = 75 * SCALE;
+var IMAGE_HEIGHT = 40 * SCALE;
 
 oled.IMAGE_WIDTH = IMAGE_WIDTH;
 oled.IMAGE_HEIGHT = IMAGE_HEIGHT;

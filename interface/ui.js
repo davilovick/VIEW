@@ -72,52 +72,52 @@ function load(program, selected) {
         if(selected >= currentProgram.items.length) selected = currentProgram.items.length - 1;
     }
     if (currentProgram.type == "timelapse") {
-        //TODO: oled.setTimelapseMode(true);
+        oled.setTimelapseMode(true);
     } else {
-        //TODO: oled.setTimelapseMode(false);
+        oled.setTimelapseMode(false);
     }
-    // if (currentProgram.type == "menu" && currentProgram.hasImages == true) {
-    //     oled.createMenuImage(currentProgram.items.map(function(item) {
-    //         return {
-    //             name: item.name,
-    //             line2: item.line2,
-    //             image: item.image
-    //         };
-    //     }), selected || 0);
-    //     oled.update();
-    // } else if (currentProgram.type == "menu") {
-    //     oled.create(currentProgram.items.map(function(item) {
-    //         return item.name;
-    //     }), selected || 0);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "options") {
-    //     oled.value(currentProgram.items, selected || 0);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "textInput") {
-    //     oled.text(currentProgram.name, currentProgram.value);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "numberInput") {
-    //     oled.number(currentProgram.name, currentProgram.value);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "timeInput") {
-    //     oled.time(currentProgram.name, currentProgram.value);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "dateInput") {
-    //     oled.date(currentProgram.name, currentProgram.value);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "textDisplay") {
-    //     oled.displayText(currentProgram.name, currentProgram.value);
-    //     oled.update();
-    // }
-    // if (currentProgram.type == "png" && currentProgram.file) {
-    //     oled.png(currentProgram.file);
-    // }
+    if (currentProgram.type == "menu" && currentProgram.hasImages == true) {
+        oled.createMenuImage(currentProgram.items.map(function(item) {
+            return {
+                name: item.name,
+                line2: item.line2,
+                image: item.image
+            };
+        }), selected || 0);
+        oled.update();
+    } else if (currentProgram.type == "menu") {
+        oled.create(currentProgram.items.map(function(item) {
+            return item.name;
+        }), selected || 0);
+        oled.update();
+    }
+    if (currentProgram.type == "options") {
+        oled.value(currentProgram.items, selected || 0);
+        oled.update();
+    }
+    if (currentProgram.type == "textInput") {
+        oled.text(currentProgram.name, currentProgram.value);
+        oled.update();
+    }
+    if (currentProgram.type == "numberInput") {
+        oled.number(currentProgram.name, currentProgram.value);
+        oled.update();
+    }
+    if (currentProgram.type == "timeInput") {
+        oled.time(currentProgram.name, currentProgram.value);
+        oled.update();
+    }
+    if (currentProgram.type == "dateInput") {
+        oled.date(currentProgram.name, currentProgram.value);
+        oled.update();
+    }
+    if (currentProgram.type == "textDisplay") {
+        oled.displayText(currentProgram.name, currentProgram.value);
+        oled.update();
+    }
+    if (currentProgram.type == "png" && currentProgram.file) {
+        oled.png(currentProgram.file);
+    }
     if (currentProgram.type == "function" && currentProgram.fn) {
         currentProgram.fn(currentProgram.arg, function(err, program) {
             if(!err && program && (program.type)) {
@@ -326,7 +326,7 @@ exports.back = function() {
         activity();
         back();
     } else {
-        //if (oled.visible) oled.hide();
+        if (oled.visible) oled.hide();
     }
 }
 

@@ -7,11 +7,33 @@ var GPS = require('gps');
 var moment = require('moment');
 require('rootpath')();
 var power = require('hardware/power.js');
+var RotaryEncoder = require('hardware/button.js').RotaryEncoder;
+
 var gps = new GPS;
 var MCU_VERSION = 2;
 
+var ROA_PIN = 31;
+var ROB_PIN = 33;
+
+var rotaryEncoder = new RotaryEncoder(ROA_PIN, ROB_PIN);
 
 var mcu = new EventEmitter();
+
+rotaryEncoder.on('knob', function(value){
+	//console.log('KNOB', value);
+	mcu.knob = value;
+	mcu.emit('knob', value);
+});
+
+rotaryEncoder.on('press', function(){
+	console.log('KNOB Press');
+	mcu.emit('knob-press', true);
+});
+
+rotaryEncoder.on('release', function(){
+	console.log('KNOB release');
+	mcu.emit('knob-press', false);
+});
 
 mcu.ready = null;
 mcu.gpsAvailable = null;
@@ -24,14 +46,13 @@ mcu.customLongitude = null;
 
 mcu.init = function(callback) {
 	// _connectSerial('/dev/ttyS1', function(err, version) {
-	// 	if(!err && version) {
-	// 		mcu.ready = true;
-	// 		callback && callback(null, version);
-	// 	} else {
-	// 		mcu.ready = false;
-	// 		callback && callback(err);
-	// 	}
-	// });
+	 	// if(!err && version) {
+	 		mcu.ready = true;
+	 		callback && callback(null, 1);
+	 	// } else {
+	 	// 	mcu.ready = false;
+	 	// 	callback && callback(err);
+	 	// }
 }
 
 mcu.setTz = function(tz) {

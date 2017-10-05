@@ -12,7 +12,8 @@ var async = require('async');
 var filesystem = require('system/filesystem.js');
 
 var TLROOT = filesystem.timelapsePath;
-var Button = require('gpio-button');
+//var Button = require('gpio-button');
+var Button = require('hardware/button.js').Button;
 //TODO: var gpio = require('linux-gpio');
 var _ = require('underscore');
 // var suncalc = require('suncalc');
@@ -21,6 +22,8 @@ var eclipse = require('intervalometer/eclipse.js');
 var AUXTIP_OUT = 111;
 var AUXRING_OUT = 110;
 var HOTSHOE_IN = 34;
+
+var AUX2_PIN = 29;
 
 //TODO: 
 // gpio.setMode(gpio.MODE_RAW);
@@ -69,7 +72,8 @@ status = {
 }
 intervalometer.status = status;
 
-var auxTrigger = new Button('input-aux2');
+//var auxTrigger = new Button('input-aux2');
+var auxTrigger = new Button(AUX2_PIN);
 
 auxTrigger.on('press', function() {
     console.log("AUX2 trigger!");

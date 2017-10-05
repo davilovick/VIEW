@@ -27,8 +27,10 @@ var doUBootUpdate = "/usr/bin/test -e /home/view/current/boot/u-boot-sunxi-with-
 
 var installIcons = "/usr/bin/test -e /home/view/current/fonts/icons.ttf && cp -u /home/view/current/fonts/icons.ttf /usr/share/fonts/truetype/";
 
+return;
+
 function checkLibGPhotoUpdate(callback) {
-	exec(getLibGPhoto2Version, function(err, stdout, stderr) {
+/*	exec(getLibGPhoto2Version, function(err, stdout, stderr) {
 		if(!err && stdout) {
 			var parts = stdout.match(/([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/);
 			if(parts && parts.length > 1 ) {
@@ -47,21 +49,21 @@ function checkLibGPhotoUpdate(callback) {
 		} else {
 			callback("error getting version");
 		}
-	});
+	});*/
 }
 
 function installLibGPhoto(callback) {
-	exports.updatingLibGphoto = true;
+/*	exports.updatingLibGphoto = true;
 	exec(installLibGPhoto2, function(err) {
 		exports.updatingLibGphoto = false;
 		checkLibGPhotoUpdate(function(err2, update) {
 			callback(err);
 		});
-	});
+	});*/
 }
 
 function apiRequest(method, callback) {
-	var req = https.request({method:'get', host:apiHost, path: apiEndpoint+method, headers: {'user-agent': 'VIEW-app'}}, function(res) {
+/*	var req = https.request({method:'get', host:apiHost, path: apiEndpoint+method, headers: {'user-agent': 'VIEW-app'}}, function(res) {
 		//console.log(`STATUS: ${res.statusCode}`);
 		//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
 		res.setEncoding('utf8');
@@ -80,11 +82,11 @@ function apiRequest(method, callback) {
 	req.end();
 	req.on('error', function(err) {
 		if(callback) callback(err);
-	});
+	});*/
 }
 
 function download(href, path, callback) {
-	var options = url.parse(href);
+/*	var options = url.parse(href);
 	options.headers = {'user-agent': 'VIEW-app'};
 	options.method = "GET";
 	//options.auth = username+':'+accessToken;
@@ -114,11 +116,11 @@ function download(href, path, callback) {
 	req.end();
 	req.on('error', function(err) {
 		callback(err);
-	});
+	});*/
 }
 
 function extract(zipPath, destFolder, callback) {
-	exec("test -e " + destFolder + '_zip_extract' + " && rm -rf " + destFolder + '_zip_extract', function(err){
+/*	exec("test -e " + destFolder + '_zip_extract' + " && rm -rf " + destFolder + '_zip_extract', function(err){
 		var unzip = spawn('unzip', ['-q', zipPath, '-d', destFolder + '_zip_extract']);
 		console.log("extracting...");
 		unzip.once('close', function(code) {
@@ -135,11 +137,11 @@ function extract(zipPath, destFolder, callback) {
 				}
 			});
 		});
-	});
+	});*/
 }
 
 function checkKernel(callback) {
-	exec(getKernelVersion, function(err, stdout, stderr) {
+/*	exec(getKernelVersion, function(err, stdout, stderr) {
 		if(!err && stdout) {
 			var currentKernel = stdout.trim();
 			if(currentKernel == kernelVersion) {
@@ -151,12 +153,12 @@ function checkKernel(callback) {
 		} else {
 			callback(err, false);
 		}
-	});
+	});*/
 }
 
 exports.updatingKernel = false;
 function updateKernel(callback) {
-	checkKernel(function(err1, needUpdate) {
+/*	checkKernel(function(err1, needUpdate) {
 		if(needUpdate) {
 			console.log("KERNEL UPDATE REQUIRED");
 			exports.updatingKernel = true;
@@ -174,11 +176,11 @@ function updateKernel(callback) {
 			if(callback) callback(false);
 			console.log("KERNEL UP TO DATE");
 		}
-	});
+	});*/
 }
 
 function checkUBoot(callback) {
-	exec(getUBootVersion, function(err, stdout, stderr) {
+/*	exec(getUBootVersion, function(err, stdout, stderr) {
 		if(!err && stdout) {
 			var currentUBoot = stdout.trim();
 			if(currentUBoot == uBootVersion) {
@@ -190,11 +192,11 @@ function checkUBoot(callback) {
 		} else {
 			callback(err, false);
 		}
-	});
+	});*/
 }
 
 function updateUBoot(callback) {
-	checkUBoot(function(err1, needUpdate) {
+/*	checkUBoot(function(err1, needUpdate) {
 		if(needUpdate) {
 			console.log("U-BOOT UPDATE REQUIRED");
 			exec(doUBootUpdate, function(err, stdout, stderr) {
@@ -207,7 +209,7 @@ function updateUBoot(callback) {
 			if(callback) callback(false);
 			console.log("U-BOOT UP TO DATE");
 		}
-	});
+	});*/
 }
 
 exports.version = "";
@@ -275,7 +277,7 @@ var sortInstalls = function(list, reverse){
 }
 
 exports.cleanup = function() {
-	try {
+/*	try {
 		var maxKeep = 6;
 		var maxBeta = Math.floor(maxKeep / 2);
 
@@ -304,7 +306,7 @@ exports.cleanup = function() {
 		}
 	} catch(e) {
 		console.log("UPDATES: error while cleaning up", e);
-	}
+	}*/
 }
 
 exports.getCurrentVersion = function() {

@@ -16,16 +16,16 @@ console.log('System modules loaded');
 
 require('rootpath')();
 var lists = require('./camera/ptp/lists.js');
-//var updates = require('./system/updates.js');
+var updates = require('./system/updates.js');
 var clips = require('./intervalometer/clips.js');
 var core = require('./intervalometer/intervalometer-client.js');
 var image = require('./camera/image/image.js');
 if (VIEW_HARDWARE) {
     // var light = require('./hardware/light.js');
-    // var oled = require('./hardware/oled.js');
+    var oled = require('./hardware/oled.js');
     var ui = require('./interface/ui.js');
     var help = require('./interface/help.js');
-    //var inputs = require('./hardware/inputs.js');
+    var inputs = require('./hardware/inputs.js');
     var power = require('./hardware/power.js');
     var mcu = require('./hardware/mcu.js');
 }
@@ -61,12 +61,12 @@ if (VIEW_HARDWARE) {
     //     });
     // });
     // updates.installIcons();
-    // oled.init();
-    // mcu.init(function(err){
-    //     var useInputsForKnob = err ? true : false;
-    //     console.log("Using MCU for knob: ", !useInputsForKnob);
-    //     inputs.start({knob:useInputsForKnob, mcu: mcu});
-    // });
+    oled.init();
+    mcu.init(function(err){
+        var useInputsForKnob = false;
+        console.log("Using MCU for knob: ", !useInputsForKnob);
+        inputs.start({knob:useInputsForKnob, mcu: mcu});
+    });
 
     //TODO:
     // var configureWifi = function() {
@@ -200,20 +200,20 @@ if (VIEW_HARDWARE) {
     // });
 
     power.on('charging', function(status) {
-        //TODO: oled.chargeStatus(status);
+        oled.chargeStatus(status);
     });
 
     power.on('warning', function(status) {
-        //TODO: if(status) ui.status('low battery');
+        if(status) ui.status('low battery');
     });
 
     power.on('percentage', function(percentage) {
-        //TODO: oled.batteryPercentage(percentage);
+        oled.batteryPercentage(percentage);
     });
 
     power.on('shutdown', function() {
-        //TODO: console.log("CRTICIAL BATTERY LEVEL: shutting down now!");
-        //TODO: shutdownNow();
+        console.log("CRTICIAL BATTERY LEVEL: shutting down now!");
+        shutdownNow();
     });
 
     var rampingOptions = {
@@ -1367,13 +1367,13 @@ if (VIEW_HARDWARE) {
             liveviewOn = true;
             core.preview();
             console.log("(exposure) started liveview, getting settings...");
-            //TODO: inputs.on('B', captureButtonHandler);
+            inputs.on('B', captureButtonHandler);
             core.getSettings(function() {
                 console.log("(exposure) done getting settings, enabling knob handler");
                 stats = lists.evStats(core.cameraSettings);
                 ev = stats.ev;
                 if(exiting) return;
-                //TODO: inputs.on('D', captureDialHandler);
+                inputs.on('D', captureDialHandler);
             });
         }
     }
@@ -2108,16 +2108,16 @@ if (VIEW_HARDWARE) {
                 }
             }
 
-            //TODO: oled.block();
+            oled.block();
             liveviewOn = true;
-            //TODO: inputs.on('B', captureButtonHandler);
+            inputs.on('B', captureButtonHandler);
             console.log("(capture) started liveview, getting settings...");
             core.getSettings(function() {
                 console.log("(capture) done getting settings, enabling knob");
                 stats = lists.evStats(core.cameraSettings);
                 ev = stats.ev;
                 if(exiting) return;
-                //TODO: inputs.on('D', captureDialHandler);
+                inputs.on('D', captureDialHandler);
             });
             core.preview();
         }
@@ -2624,21 +2624,21 @@ if (VIEW_HARDWARE) {
             name: "Gesture Sensor",
             value: "enabled",
             help: help.gestureEnableMenu,
-            // action: 
-            //     ui.set(inputs, 'gestureStatus', 'enabled', function(cb){
-            //     db.set('gestureSensor', "yes");
+            action: 
+                 ui.set(inputs, 'gestureStatus', 'enabled', function(cb){
+                 db.set('gestureSensor', "yes");
             //     //TODO: inputs.startGesture();
-            //     cb && cb();
-            // })
+                 cb && cb();
+            })
         }, {
             name: "Gesture Sensor",
             value: "disabled",
             help: help.gestureEnableMenu,
-            // action: ui.set(inputs, 'gestureStatus', 'disabled', function(cb){
-            //     db.set('gestureSensor', "no");
-            //     //TODO: inputs.stopGesture();
-            //     cb && cb();
-            // })
+             action: ui.set(inputs, 'gestureStatus', 'disabled', function(cb){
+                 db.set('gestureSensor', "no");
+                 //TODO: inputs.stopGesture();
+                 cb && cb();
+            })
         }]
     }
 
@@ -2649,18 +2649,18 @@ if (VIEW_HARDWARE) {
             name: "Developer Mode",
             value: "disabled",
             help: help.developerModeMenu,
-            // action: ui.set(updates, 'developerMode', false, function(cb){
-            //     db.set('developerMode', "no");
-            //     cb && cb();
-            // })
+            action: ui.set(updates, 'developerMode', false, function(cb){
+                 db.set('developerMode', "no");
+                 cb && cb();
+             })
         }, {
             name: "Developer Mode",
             value: "enabled",
             help: help.developerModeMenu,
-            // action: ui.set(updates, 'developerMode', true, function(cb){
-            //     db.set('developerMode', "yes");
-            //     cb && cb();
-            // })
+            action: ui.set(updates, 'developerMode', true, function(cb){
+                db.set('developerMode', "yes");
+                cb && cb();
+            })
         }]
     }
 
@@ -3322,71 +3322,69 @@ if (VIEW_HARDWARE) {
         } ]
     }
 
-    ui.init(null);
+    ui.init(oled);
     ui.load(mainMenu);
 
-    //TODO:
-    // inputs.on('D', function(move) {
-    //     power.activity();
-    //     if(oled.videoRunning) return;
+    inputs.on('D', function(move) {
+        //TODO: power.activity();
+        if(oled.videoRunning) return;
 
-    //     blockGestureTimer();
-    //     if (blockInputs) return;
+        blockGestureTimer();
+        if (blockInputs) return;
 
-    //     if (move == "U") {
-    //         ui.up();
-    //     }
-    //     if (move == "D") {
-    //         ui.down();
-    //     }
-    //     if (move == "U+") {
-    //         ui.up(true);
-    //     }
-    //     if (move == "D+") {
-    //         ui.down(true);
-    //     }
-    // });
+        if (move == "U") {
+            ui.up();
+        }
+        if (move == "D") {
+            ui.down();
+        }
+        if (move == "U+") {
+            ui.up(true);
+        }
+        if (move == "D+") {
+            ui.down(true);
+        }
+    });
 
-    //TODO:
-    // inputs.on('B', function(move) {
-    //     power.activity();
-    //     if(oled.videoRunning) {
-    //         oled.stopVideo();
-    //         return;
-    //     }
-    //     blockGestureTimer();
-    //     if (blockInputs) return;
 
-    //     if (move == "1") {
-    //         ui.backButton();
-    //     }
-    //     if (move == "2") {
-    //         ui.enter();
-    //     }
-    //     if (move == "3") {
-    //         ui.button3();
-    //     }
-    //     if (move == "4") {
-    //         ui.enter(true);
-    //     }
+    inputs.on('B', function(move) {
+        //power.activity();
+        if(oled.videoRunning) {
+            oled.stopVideo();
+            return;
+        }
+        blockGestureTimer();
+        if (blockInputs) return;
 
-    //     if (move == "5") {
-    //         ui.help();
-    //     }
+        if (move == "1") {
+            ui.backButton();
+        }
+        if (move == "2") {
+            ui.enter();
+        }
+        if (move == "3") {
+            ui.button3();
+        }
+        if (move == "4") {
+            ui.enter(true);
+        }
 
-    //     if (move == 6) {
-    //         ui.load(powerConfirm, null, null, true);
-    //     }
-    // });
+        if (move == "5") {
+            ui.help();
+        }
+
+        if (move == 6) {
+            ui.load(powerConfirm, null, null, true);
+        }
+    });
 
     var confirmSaveXMPs = function(clip) {
-        ui.confirmationPrompt("Save new XMPs to SD?", "write to SD", "cancel", help.saveXMPs, function(cb){
-            //TODO:
-            // oled.value([{
-            //     name: "Writing to card",
-            //     value: "please wait"
-            // }]);
-            // oled.update();
+        ui.confirmationPrompt("Save new XMPs to SD?", "write to SD", "cancel", help.saveXMPs, function(cb){            
+            oled.value([{
+                 name: "Writing to card",
+                 value: "please wait"
+            }]);
+            oled.update();
             if(clip) {
                 clips.saveXMPsToCard(clip.index, function(err) {
                     ui.back();
@@ -3635,7 +3633,7 @@ function closeSystem(callback) {
     app.close();
     if (VIEW_HARDWARE) {
         console.log("closing inputs...");
-        //TODO:inputs.stop();
+        inputs.stop();
     }
     try {
         db.set('intervalometer.currentProgram', core.currentProgram);
@@ -3653,24 +3651,24 @@ function closeSystem(callback) {
         console.log("db closed.");
         cbDone = true;
         if (VIEW_HARDWARE) {
-            //TODO:oled.close();
-            //callback && callback();
+            oled.close();
+            callback && callback();
         } else {
-            //callback && callback();
+            callback && callback();
         }
     });
 
     cbDone = true;
     callback && callback();
 
-    //setTimeout(function(){
-    //    if(!cbDone) {
-    //        console.log("db failed to close, continuing...");
-    //        cbDone = true;
-    //        callback && callback();
-    //    }
-    //}, 1000);
-    //db.setCache('intervalometer.status', core.intervalometerStatus);
+    setTimeout(function(){
+       if(!cbDone) {
+           console.log("db failed to close, continuing...");
+           cbDone = true;
+           callback && callback();
+       }
+    }, 1000);
+    db.setCache('intervalometer.status', core.intervalometerStatus);
 }
 
 nodeCleanup(function (exitCode, signal) {
@@ -3772,13 +3770,13 @@ db.get('gestureSensor', function(err, en) {
 
 db.get('colorTheme', function(err, theme) {
     if(!err && theme) {
-       //TODO: oled.setTheme(theme);
+       oled.setTheme(theme);
     }
 });
 
 db.get('audioAlerts', function(err, audio) {
     if(!err && audio) {
-        //TODO:ui.audio = audio;
+        ui.audio = audio;
     }
 });
 
@@ -4204,7 +4202,7 @@ core.on('camera.photo', function() {
                     if (!err && jpgBuf) {
                         image.saveTemp("oledthm" + thmIndex, jpgBuf, function(err, path) {
                             if(thmIndex == "1") thmIndex = "2"; else thmIndex = "1"; // alternate to avoid reading partial file
-                            //TODO:oled.updateThumbnailPreview(path);
+                            oled.updateThumbnailPreview(path);
                         });
                     }
                 });
@@ -4219,8 +4217,8 @@ core.on('camera.photo', function() {
                 image.downsizeJpeg(new Buffer(core.photo.jpeg), size, null, function(err, jpgBuf) {
                     if (!err && jpgBuf) {
                         image.saveTemp("oledthm", jpgBuf, function(err, path) {
-                            //TODO:oled.jpeg(path, 0, 15, true);
-                            //TODO:oled.update(true);
+                            oled.jpeg(path, 0, 15, true);
+                            oled.update(true);
                         });
                     }
                 });
@@ -4247,15 +4245,15 @@ core.on('camera.photo', function() {
 });
 
 core.on('camera.histogram', function(histogram) {
-    //TODO:oled.updateHistogram(histogram);
+    oled.updateHistogram(histogram);
     app.send('histogram', {
         histogram: histogram
     });
 });
 
 app.on('connected', function(connected) {
-    //TODO:oled.setIcon('web', connected);
-    //TODO:ui.reload();
+    oled.setIcon('web', connected);
+    ui.reload();
 });
 
 core.on('camera.settings', function() {
@@ -4273,37 +4271,37 @@ core.on('camera.connected', function() {
             btBlockedForSony = true;
         }
     }
-    //TODO:oled.setIcon('camera', true);
+    oled.setIcon('camera', true);
     setTimeout(function() {
         app.send('camera', {
             connected: true,
             model: core.cameraModel
         });
         if (VIEW_HARDWARE) {
-            //TODO:ui.status(core.cameraModel);
-            //TODO:ui.reload();
+            ui.status(core.cameraModel);
+            ui.reload();
         }
     }, 1000);
 });
 
 var defaultStatus = "VIEW " + "1.0.0"; //TODO: updates.getCurrentVersion();
-//TODO:ui.defaultStatus(defaultStatus);
-//TODO:ui.status(defaultStatus);
+ui.defaultStatus(defaultStatus);
+ui.status(defaultStatus);
 console.log("Setting default status to '" + defaultStatus + "'")
 
 core.on('camera.exiting', function() {    
     if(btBlockedForSony) {
         wifi.unblockBt();
     }
-    //TODO:oled.setIcon('camera', false);
+    oled.setIcon('camera', false);
     app.send('camera', {
         connected: false,
         model: ''
     });
     if (VIEW_HARDWARE) {
-        //TODO:ui.defaultStatus(defaultStatus);
-        //TODO:ui.status("camera disconnected");
-        //TODO:ui.reload();
+        ui.defaultStatus(defaultStatus);
+        ui.status("camera disconnected");
+        ui.reload();
     }
 });
 
@@ -4318,16 +4316,15 @@ core.on('camera.status', function(msg) {
         status: msg
     });
 
-    //TODO:
-     //if (!blockInputs && VIEW_HARDWARE) {
+     if (!blockInputs && VIEW_HARDWARE) {
              
-        //     ui.status(msg);
-        //     if (core.cameraConnected) {
-        //          ui.defaultStatus(core.cameraModel);
-        //      } else {
-        //          ui.defaultStatus(defaultStatus);
-        //      }
-     //}
+            ui.status(msg);
+            if (core.cameraConnected) {
+                 ui.defaultStatus(core.cameraModel);
+             } else {
+                 ui.defaultStatus(defaultStatus);
+             }
+     }
 });
 
 core.on('intervalometer.status', function(msg) {
@@ -4363,19 +4360,18 @@ core.on('intervalometer.status', function(msg) {
         running: msg.running
     }
     console.log("statusScreen", statusScreen);
-    //TODO:oled.updateTimelapseStatus(statusScreen);
-    //TODO:ui.reload();
-    // if (msg.message != "running" && !blockInputs && VIEW_HARDWARE) {
-    //     ui.status(msg.message);
-    // }
+    oled.updateTimelapseStatus(statusScreen);
+    ui.reload();
+    if (msg.message != "running" && !blockInputs && VIEW_HARDWARE) {
+        ui.status(msg.message);
+    }
 });
 
 core.on('camera.connectionError', function(msg) {
-    //TODO:
-    // if(ui.currentOrigin() == 'alert') {
-    //     ui.back();
-    // }
-    // ui.alert('ERROR', msg, null, true);
+    if(ui.currentOrigin() == 'alert') {
+        ui.back();
+    }
+    ui.alert('ERROR', msg, null, true);
     app.send('connectionError', {
         msg: msg
     });
@@ -4383,11 +4379,11 @@ core.on('camera.connectionError', function(msg) {
 });
 
 core.on('intervalometer.error', function(msg) {
-    //TODO:
-    // if(ui.currentOrigin() == 'alert') {
-    //     ui.back();
-    // }
-    // ui.alert('ERROR', msg, null, true);
+
+    if(ui.currentOrigin() == 'alert') {
+        ui.back();
+    }
+    ui.alert('ERROR', msg, null, true);
     app.send('intervalometerError', {
         msg: msg
     });
@@ -4398,12 +4394,12 @@ core.on('motion.status', function(status) {
     console.log("motion.status", status)
     app.send('motion', status);
     if (status.available) {
-        //TODO:oled.setIcon('bt', true);
-        //stopScan();
-        //TODO:ui.reload();
+        oled.setIcon('bt', true);
+        stopScan();
+        ui.reload();
     } else {
-        //TODO:oled.setIcon('bt', false);
-        //TODO:ui.reload();
+        oled.setIcon('bt', false);
+        ui.reload();
         if(status.reload) {
             connected.log("motion disconnected, reloading BT")
             wifi.resetBt(function(){

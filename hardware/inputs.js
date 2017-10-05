@@ -1,10 +1,12 @@
 require('rootpath')();
 var INPUTS_BIN_PATH = "/home/view/current/bin/inputs";
 var GESTURE_BIN_PATH = "/home/view/current/bin/gesture";
-var GestureLib = require('apds-gesture');
+//var GestureLib = require('apds-gesture');
 var spawn = require('child_process').spawn;
 var exec = require('child_process').exec;
-var Button = require('gpio-button');
+//var Button = require('gpio-button');
+var Button = require('hardware/button.js').Button;
+
 var db = require("system/db.js");
 var EventEmitter = require("events").EventEmitter;
 
@@ -13,19 +15,19 @@ var inputs = new EventEmitter();
 var GESTURE_INT_GPIO = 72;//PC8
 var GESTURE_I2C_BUS = 2;
 
-var gesture = GestureLib.use(GESTURE_I2C_BUS, GESTURE_INT_GPIO);
+//var gesture = GestureLib.use(GESTURE_I2C_BUS, GESTURE_INT_GPIO);
 
-gesture.on('ready', function() {
-    console.log("INPUTS: found a gesture sensor");
-});
+//gesture.on('ready', function() {
+//    console.log("INPUTS: found a gesture sensor");
+//});
 
-gesture.on('error', function(err) {
-    console.log("INPUTS: Gesture Error: ", err);
-});
+//gesture.on('error', function(err) {
+//    console.log("INPUTS: Gesture Error: ", err);
+//});
 
-gesture.on('movement', function(dir) {
-    inputs.emit('G', dir.substr(0, 1).toUpperCase());
-});
+//gesture.on('movement', function(dir) {
+//    inputs.emit('G', dir.substr(0, 1).toUpperCase());
+//});
 
 var inputsProcess = null;
 var inputsRunning = false;
@@ -37,43 +39,59 @@ var stopGesture = false;
 
 var HOLD_TIME = 1500;
 
-var powerButton = {
-    platformEvent: "1c2ac00.i2c-platform-axp20x-pek",
-    116: {
-        name: "power",
-        pressed: 5,
-        held: 6
-    }
-}
-var buttons = {
-    platformEvent: "button-knob",
-    1: {
-        name: "back",
-        pressed: 1,
-        held: 1+6
-    }, 
-    2: {
-        name: "enter",
-        pressed: 2,
-        held: 2+6
-    },
-    3: {
-        name: "menu",
-        pressed: 3,
-        held: 3+6
-    },
-    4: {
-        name: "knob",
-        pressed: 4,
-        held: 4+6
-    }
-};
+var KNOB_PIN = 35;
+var POWER_PIN = 36;
+var BACK_PIN = 37;
+var ENTER_PIN = 40;
+var MENU_PIN = 38;
 
-setupButton(powerButton);
-setupButton(buttons);
 
-function setupButton(buttonConfig) {
-    buttonConfig._button = new Button(buttonConfig.platformEvent);
+var POWER = 5;
+var BACK = 1;
+var ENTER = 2;
+var MENU = 3;
+var KNOB = 4;
+
+var knobButton = new Button(KNOB_PIN);
+knobButton.on('press', function(){
+    inputs.emit('B', KNOB);
+});
+
+var backButton = new Button(BACK_PIN);
+backButton.on('press', function(){
+    inputs.emit('B', BACK);
+});
+
+var enterButton = new Button(ENTER_PIN);
+enterButton.on('press', function(){
+    inputs.emit('B', ENTER);
+});
+
+var powerButton = new Button(POWER_PIN);
+powerButton.on('press', function(){
+    inputs.emit('B', POWER);
+});
+
+var menuButton = new Button(MENU_PIN);
+menuButton.on('press', function(){
+    inputs.emit('B', MENU);
+});
+
+function setupButton(buttonsConfig) {
+    for(var key in buttonsConfig)
+    {
+        var buttonConfig = buttonsConfig[key];
+        console.log(buttonConfig);
+        var button =  new Button(buttonConfig.pin);
+        var pressed = buttonConfig.pressed;
+        button.on('press', function(){
+            console.log(buttonConfig, pressed);
+            inputs.emit('B', pressed);
+        });
+
+        buttonConfig.button = button;
+    }
+/*    buttonConfig._button = new Button(buttonConfig.platformEvent);
 
     buttonConfig._btnPowerPressedTimer = null;
     buttonConfig._button.on('press', function(code) {
@@ -99,6 +117,7 @@ function setupButton(buttonConfig) {
     buttonConfig._button.on('error', function(err) {
         console.log("button error: ", buttonConfig.name, err);
     });
+    */
 }
 
 
@@ -108,7 +127,7 @@ var options = {};
 var mcuSetup = false;
 inputs.start = function(knobOptions) {
     options = knobOptions;
-    if(knobOptions.knob) {
+    /*if(knobOptions.knob) {
         stop = false;
         if(inputsRunning) return;
         inputsProcess = spawn(INPUTS_BIN_PATH);
@@ -139,6 +158,7 @@ inputs.start = function(knobOptions) {
             }
         });
     } else if(options.mcu) {
+        */
         if(mcuSetup) return;
         mcuSetup = true;
         options.mcu.on('knob', function(val) {
@@ -146,10 +166,11 @@ inputs.start = function(knobOptions) {
             if(val < 0) {
                 k = 'D';
             }
-            if(buttons['4']._pressed) k += "+";
+            if(knobButton.IsPressed) k += "+";
             inputs.emit('D', k);
+            console.log('D', k);
         });
-    }
+   // }
 }
 
 inputs.startGesture = function() {
